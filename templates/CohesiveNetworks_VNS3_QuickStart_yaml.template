@@ -1,0 +1,725 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CloudFormation script to create one VNS3 free edition network controller with five amazon linux 2 overlay clients '
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "VNS3 Configuration"
+        Parameters:
+          - VNS3InstanceTypeParameter
+          - AccessLocation
+      -
+        Label:
+          default: "EC2 Configuration"
+        Parameters:
+          - ClientInstanceTypeParameter
+          - KeyName
+    ParameterLabels:
+      VNS3InstanceTypeParameter:
+        default: "VNS3 Instance Type"
+      ClientInstanceTypeParameter:
+        default: "Overlay Clients Instance Type"
+      KeyName:
+        default: "SSH Key to use to access overlay clients"
+      SSHLocation:
+        default: "SSH IP Address Range"
+Parameters: 
+  VNS3InstanceTypeParameter:
+    Description: 'Enter t3.nano, t3.micro or t3.small. Default is t3.micro.'
+    Type: String
+    Default: 't3.micro'
+    AllowedValues: 
+      - t3.nano
+      - t3.micro
+      - t3.small
+  ClientInstanceTypeParameter:
+    Description: 'Enter t3.nano, t3.micro or t3.small. Default is t3.nano.'
+    Type: String
+    Default: 't3.nano'
+    AllowedValues: 
+      - t3.nano
+      - t3.micro
+      - t3.small
+  KeyName:
+    Description: 'Name of an existing EC2 KeyPair to enable SSH access to the instance.'
+    Type: 'AWS::EC2::KeyPair::KeyName'
+    ConstraintDescription: 'must be the name of an existing EC2 KeyPair.'
+  AccessLocation:
+    Description: ' The IP address range that can be used to SSH to the EC2 instances'
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 0.0.0.0/0
+    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+Conditions:
+  HasKeyName: !Not [!Equals [!Ref KeyName, '']]
+Mappings: 
+  RegionMap: 
+    ap-northeast-1: 
+      "VNS3": "ami-062ee71212081e280"
+      "AmzLnx2": "ami-0d7ed3ddb85b521a6"
+    ap-northeast-2: 
+      "VNS3": "ami-0fd184edabb67ff7c"
+      "AmzLnx2": "ami-018a9a930060d38aa"
+    ap-south-1: 
+      "VNS3": "ami-04fa3847f12179bbf"
+      "AmzLnx2": "ami-0937dcc711d38ef3f"
+    ap-southeast-1: 
+      "VNS3": "ami-0f7fe0c9d55f5d94c"
+      "AmzLnx2": "ami-04677bdaa3c2b6e24"
+    ap-southeast-2: 
+      "VNS3": "ami-0f1e71713f4b94c86"
+      "AmzLnx2": "ami-0c9d48b5db609ad6e"
+    ca-central-1: 
+      "VNS3": "ami-0724736041a6dd69a"
+      "AmzLnx2": "ami-0de8b8e4bc1f125fe"
+    eu-central-1: 
+      "VNS3": "ami-07f43803c8e29a819"
+      "AmzLnx2": "ami-0eaec5838478eb0ba"
+    eu-north-1:
+      "VNS3": "ami-48169836"
+      "AmzLnx2": "ami-6d27a913"
+    eu-west-1: 
+      "VNS3": "ami-010e25e412e24fa22"
+      "AmzLnx2": "ami-0fad7378adf284ce0"
+    eu-west-2:
+      "VNS3": "ami-08386e5e061446106"
+      "AmzLnx2": "ami-0664a710233d7c148"
+    eu-west-3:
+      "VNS3": "ami-01450508266d05894"
+      "AmzLnx2": "ami-0854d53ce963f69d8"
+    sa-east-1:
+      "VNS3": "ami-0e49820c14755c6c8"
+      "AmzLnx2": "ami-0b04450959586da29"
+    us-east-1:
+      "VNS3": "ami-0f1cb9aac86bfdd40"
+      "AmzLnx2": "ami-035be7bafff33b6b6"
+    us-east-2:
+      "VNS3": "ami-0237b7b3cb0eba5f5"
+      "AmzLnx2": "ami-04328208f4f0cf1fe"
+    us-west-1:
+      "VNS3": "ami-021d86dbbb378d6c9"
+      "AmzLnx2": "ami-0799ad445b5727125"
+    us-west-2:
+      "VNS3": "ami-094fd4b3d43102d26"
+      "AmzLnx2": "ami-032509850cf9ee54e"
+Resources:
+  VPC:
+    Type: 'AWS::EC2::VPC'
+    Properties:
+      CidrBlock: '10.0.0.0/24'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      InstanceTenancy: default
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}'
+  InternetGateway:
+    Type: 'AWS::EC2::InternetGateway'
+    Properties:
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}'
+  VPCGatewayAttachment:
+    Type: 'AWS::EC2::VPCGatewayAttachment'
+    Properties:
+      VpcId: !Ref VPC
+      InternetGatewayId: !Ref InternetGateway
+  NAT:
+    DependsOn: VPCGatewayAttachment
+    Type: AWS::EC2::NatGateway
+    Properties: 
+      AllocationId:
+        Fn::GetAtt:
+        - ElasticIPNATGW
+        - AllocationId
+      SubnetId:
+        Ref: SubnetAPublic
+      Tags: 
+        - Key: Name
+          Value: !Sub '${AWS::StackName}'
+  SubnetAPublic:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: '10.0.0.0/28'
+      MapPublicIpOnLaunch: true
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: 'A public'
+      - Key: Reach
+        Value: public
+  SubnetAPrivate:
+    Type: 'AWS::EC2::Subnet'
+    Properties:
+      AvailabilityZone: !Select [0, !GetAZs '']
+      CidrBlock: '10.0.0.32/28'
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: 'A private'
+      - Key: Reach
+        Value: private
+  RouteTableAPublic:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: 'A Public'
+  RouteTableAPrivate:
+    Type: 'AWS::EC2::RouteTable'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: 'A Private'
+  RouteTableAssociationAPublic:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetAPublic
+      RouteTableId: !Ref RouteTableAPublic
+  RouteTableAssociationAPrivate:
+    Type: 'AWS::EC2::SubnetRouteTableAssociation'
+    Properties:
+      SubnetId: !Ref SubnetAPrivate
+      RouteTableId: !Ref RouteTableAPrivate
+  RouteTablePublicAInternetRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTableAPublic
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+  RouteTablePrivateAInternetRoute:
+    Type: 'AWS::EC2::Route'
+    DependsOn: VPCGatewayAttachment
+    Properties:
+      RouteTableId: !Ref RouteTableAPrivate
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref NAT
+  NetworkAclPublic:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: Public
+  NetworkAclPrivate:
+    Type: 'AWS::EC2::NetworkAcl'
+    Properties:
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: Private
+  SubnetNetworkAclAssociationAPublic:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref SubnetAPublic
+      NetworkAclId: !Ref NetworkAclPublic
+  SubnetNetworkAclAssociationAPrivate:
+    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
+    Properties:
+      SubnetId: !Ref SubnetAPrivate
+      NetworkAclId: !Ref NetworkAclPrivate
+  NetworkAclEntryInPublicAllowAll:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref NetworkAclPublic
+      RuleNumber: 99
+      Protocol: -1
+      RuleAction: allow
+      Egress: false
+      CidrBlock: '0.0.0.0/0'
+  NetworkAclEntryOutPublicAllowAll:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref NetworkAclPublic
+      RuleNumber: 99
+      Protocol: -1
+      RuleAction: allow
+      Egress: true
+      CidrBlock: '0.0.0.0/0'
+  NetworkAclEntryInPrivateAllowVPC:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref NetworkAclPrivate
+      RuleNumber: 99
+      Protocol: -1
+      RuleAction: allow
+      Egress: false
+      CidrBlock: '0.0.0.0/0'
+  NetworkAclEntryOutPrivateAllowVPC:
+    Type: 'AWS::EC2::NetworkAclEntry'
+    Properties:
+      NetworkAclId: !Ref NetworkAclPrivate
+      RuleNumber: 99
+      Protocol: -1
+      RuleAction: allow
+      Egress: true
+      CidrBlock: '0.0.0.0/0'
+  ElasticIPVNS3:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  ElasticIPNATGW:
+    Type: 'AWS::EC2::EIP'
+    Properties:
+      Domain: vpc
+  VNS3SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub '${AWS::StackName}'
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-VNS3'
+  SecurityGroup8000Pub:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref VNS3SecurityGroup
+      IpProtocol: tcp
+      FromPort: 8000
+      ToPort: 8000
+      CidrIp: !Ref AccessLocation
+  SecurityGroup22Pub:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref VNS3SecurityGroup
+      IpProtocol: tcp
+      FromPort: 22
+      ToPort: 22
+      CidrIp: !Ref AccessLocation
+  SecurityGroup8000Priv:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref VNS3SecurityGroup
+      IpProtocol: tcp
+      FromPort: 8000
+      ToPort: 8000
+      CidrIp: '10.0.0.32/28'
+  SecurityGroup1194Priv:
+    Type: 'AWS::EC2::SecurityGroupIngress'
+    Properties:
+      GroupId: !Ref VNS3SecurityGroup
+      IpProtocol: udp
+      FromPort: 1194
+      ToPort: 1194
+      CidrIp: '10.0.0.32/28'
+  HOSTSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub '${AWS::StackName}'
+      VpcId: !Ref VPC
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-host'
+  VNS3RecoveryTestAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Trigger a recovery when instance status check fails for 2 consecutive minutes.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Statistic: Minimum
+      Period: '60'
+      EvaluationPeriods: '2'
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: '0'
+      AlarmActions: [ !Sub "arn:aws:automate:${AWS::Region}:ec2:recover" ]
+      Dimensions:
+      - Name: InstanceId
+        Value:
+          Ref: VNS3
+  VNS3:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", VNS3]
+      InstanceType: !Ref VNS3InstanceTypeParameter
+      SecurityGroupIds:
+      - !Ref VNS3SecurityGroup
+      SubnetId: !Ref SubnetAPublic
+      PrivateIpAddress: '10.0.0.5'
+      SourceDestCheck: False
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-vns3'
+  IPAssoc:
+    Type: 'AWS::EC2::EIPAssociation'
+    Properties:
+      InstanceId: !Ref VNS3
+      AllocationId: !GetAtt ElasticIPVNS3.AllocationId
+  HOST1:
+    Type: 'AWS::EC2::Instance'
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          quickstart:
+          - install
+          - configure
+          - cleanup
+        install: {}
+        configure: {}
+        cleanup: {}
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AmzLnx2]
+      InstanceType: !Ref ClientInstanceTypeParameter
+      SecurityGroupIds:
+      - !Ref HOSTSecurityGroup
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      UserData:
+        'Fn::Base64': !Sub
+           - |
+             #!/bin/bash -x
+
+             {
+             if [ ! -f /opt/firstrun ]; then
+
+             rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+             yum update
+             yum install -y openvpn
+
+             PACK=100_127_255_193
+             VNS3IP=10.0.0.5
+             VNS3PW=${VNS3IID}
+
+             wait_for_api () {
+               while :
+                 do
+                 apistatus=`curl -k -X GET -u api:$VNS3PW https://$VNS3IP:8000/api/config 2>&1`
+                    echo $apistatus | grep "refused"
+                      if [ $? != 0 ] ; then
+                        break
+                      fi
+                     sleep 2
+                 done
+             }
+
+             wait_for_api
+
+             request_body=$(< <(cat <<EOF
+             {
+               "name": "$PACK",
+               "format": "conf"
+             }
+             EOF
+             ))
+
+             curl -s -k -X GET -u api:$VNS3PW -H 'Content-Type: application/json' -d "$request_body" https://$VNS3IP:8000/api/clientpack -o /etc/openvpn/$PACK.conf
+             echo "redirect-gateway def1" >> /etc/openvpn/$PACK.conf
+             echo "route 10.0.0.0 255.255.255.0 net_gateway" >> /etc/openvpn/$PACK.conf
+             systemctl -f enable openvpn@$PACK.service
+             systemctl start openvpn@$PACK
+             curl -k -X POST -u api:$VNS3PW -d '{"rule":"MACRO_CUST -o eth0 -s 100.127.255.193/29 -j MASQUERADE"}' -H 'Content-Type: application/json' https://$VNS3IP:8000/api/firewall/rules
+             curl -k -X POST -u api:$VNS3PW -d '{"rule":"PREROUTING_CUST -i eth0 -p tcp -s 0.0.0.0/0 --dport 22 -j DNAT --to 100.127.255.193:22"}' -H 'Content-Type: application/json' https://$VNS3IP:8000/api/firewall/rules
+             curl -k -X POST -u api:$VNS3PW -d '{"rule":"FORWARD_CUST -j ACCEPT"}' -H 'Content-Type: application/json' https://$VNS3IP:8000/api/firewall/rules
+
+             touch /opt/firstrun
+
+             fi
+             }
+           -
+             VNS3IID: !Ref VNS3
+      SubnetId: !Ref SubnetAPrivate
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-host1'
+
+  HOST2:
+    Type: 'AWS::EC2::Instance'
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          quickstart:
+          - install
+          - configure
+          - cleanup
+        install: {}
+        configure: {}
+        cleanup: {}
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AmzLnx2]
+      InstanceType: !Ref ClientInstanceTypeParameter
+      SecurityGroupIds:
+      - !Ref HOSTSecurityGroup
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      UserData:
+        'Fn::Base64': !Sub
+           - |
+             #!/bin/bash -x
+
+             {
+             if [ ! -f /opt/firstrun ]; then
+             
+             rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+             yum update -y
+             yum install openvpn -y
+
+             PACK=100_127_255_194
+             VNS3IP=10.0.0.5
+             VNS3PW=${VNS3IID}
+
+             wait_for_api () {
+               while :
+                 do
+                 apistatus=`curl -k -X GET -u api:$VNS3PW https://$VNS3IP:8000/api/config 2>&1`
+                    echo $apistatus | grep "refused"
+                      if [ $? != 0 ] ; then
+                        break
+                      fi
+                     sleep 2
+                 done
+             }
+
+             wait_for_api
+
+             request_body=$(< <(cat <<EOF
+             {
+               "name": "$PACK",
+               "format": "conf"
+             }
+             EOF
+             ))
+
+             sudo curl -s -k -X GET -u api:$VNS3PW -H 'Content-Type: application/json' -d "$request_body" https://$VNS3IP:8000/api/clientpack -o /etc/openvpn/$PACK.conf
+             echo "redirect-gateway def1" >> /etc/openvpn/$PACK.conf
+             echo "route 10.0.0.0 255.255.255.0 net_gateway" >> /etc/openvpn/$PACK.conf
+             sudo systemctl -f enable openvpn@$PACK.service
+             sudo systemctl start openvpn@$PACK
+             
+             touch /opt/firstrun
+
+             fi
+             }
+           -
+             VNS3IID: !Ref VNS3
+      SubnetId: !Ref SubnetAPrivate
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-host2'
+  HOST3:
+    Type: 'AWS::EC2::Instance'
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          quickstart:
+          - install
+          - configure
+          - cleanup
+        install: {}
+        configure: {}
+        cleanup: {}
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AmzLnx2]
+      InstanceType: !Ref ClientInstanceTypeParameter
+      SecurityGroupIds:
+      - !Ref HOSTSecurityGroup
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      UserData:
+        'Fn::Base64': !Sub
+           - |
+             #!/bin/bash -x
+
+             {
+             if [ ! -f /opt/firstrun ]; then
+             
+             rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+             yum update -y
+             yum install openvpn -y
+
+             PACK=100_127_255_195
+             VNS3IP=10.0.0.5
+             VNS3PW=${VNS3IID}
+
+             wait_for_api () {
+               while :
+                 do
+                 apistatus=`curl -k -X GET -u api:$VNS3PW https://$VNS3IP:8000/api/config 2>&1`
+                    echo $apistatus | grep "refused"
+                      if [ $? != 0 ] ; then
+                        break
+                      fi
+                     sleep 2
+                 done
+             }
+
+             wait_for_api
+
+             request_body=$(< <(cat <<EOF
+             {
+               "name": "$PACK",
+               "format": "conf"
+             }
+             EOF
+             ))
+
+             sudo curl -s -k -X GET -u api:$VNS3PW -H 'Content-Type: application/json' -d "$request_body" https://$VNS3IP:8000/api/clientpack -o /etc/openvpn/$PACK.conf
+             echo "redirect-gateway def1" >> /etc/openvpn/$PACK.conf
+             echo "route 10.0.0.0 255.255.255.0 net_gateway" >> /etc/openvpn/$PACK.conf
+             sudo systemctl -f enable openvpn@$PACK.service
+             sudo systemctl start openvpn@$PACK
+             
+             touch /opt/firstrun
+
+             fi
+             }
+           -
+             VNS3IID: !Ref VNS3
+      SubnetId: !Ref SubnetAPrivate
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-host3'
+  HOST4:
+    Type: 'AWS::EC2::Instance'
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          quickstart:
+          - install
+          - configure
+          - cleanup
+        install: {}
+        configure: {}
+        cleanup: {}
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AmzLnx2]
+      InstanceType: !Ref ClientInstanceTypeParameter
+      SecurityGroupIds:
+      - !Ref HOSTSecurityGroup
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      UserData:
+        'Fn::Base64': !Sub
+           - |
+             #!/bin/bash -x
+
+             {
+             if [ ! -f /opt/firstrun ]; then
+
+             rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+             yum update -y
+             yum install openvpn -y
+
+             PACK=100_127_255_196
+             VNS3IP=10.0.0.5
+             VNS3PW=${VNS3IID}
+
+             wait_for_api () {
+               while :
+                 do
+                 apistatus=`curl -k -X GET -u api:$VNS3PW https://$VNS3IP:8000/api/config 2>&1`
+                    echo $apistatus | grep "refused"
+                      if [ $? != 0 ] ; then
+                        break
+                      fi
+                     sleep 2
+                 done
+             }
+
+             wait_for_api
+
+             request_body=$(< <(cat <<EOF
+             {
+               "name": "$PACK",
+               "format": "conf"
+             }
+             EOF
+             ))
+
+             curl -s -k -X GET -u api:$VNS3PW -H 'Content-Type: application/json' -d "$request_body" https://$VNS3IP:8000/api/clientpack -o /etc/openvpn/$PACK.conf
+             echo "redirect-gateway def1" >> /etc/openvpn/$PACK.conf
+             echo "route 10.0.0.0 255.255.255.0 net_gateway" >> /etc/openvpn/$PACK.conf
+             systemctl -f enable openvpn@$PACK.service
+             systemctl start openvpn@$PACK
+             
+             touch /opt/firstrun
+
+             fi
+             }
+           -
+             VNS3IID: !Ref VNS3
+      SubnetId: !Ref SubnetAPrivate
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-host4'
+  HOST5:
+    Type: 'AWS::EC2::Instance'
+    Metadata:
+      AWS::CloudFormation::Init:
+        configSets:
+          quickstart:
+          - install
+          - configure
+          - cleanup
+        install: {}
+        configure: {}
+        cleanup: {}
+    Properties:
+      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AmzLnx2]
+      InstanceType: !Ref ClientInstanceTypeParameter
+      SecurityGroupIds:
+      - !Ref HOSTSecurityGroup
+      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      UserData:
+        'Fn::Base64': !Sub
+           - |
+             #!/bin/bash -x
+
+             {
+             if [ ! -f /opt/firstrun ]; then
+
+             rpm -ivh https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+             yum update -y
+             yum install openvpn -y
+
+             PACK=100_127_255_197
+             VNS3IP=10.0.0.5
+             VNS3PW=${VNS3IID}
+
+             wait_for_api () {
+               while :
+                 do
+                 apistatus=`curl -k -X GET -u api:$VNS3PW https://$VNS3IP:8000/api/config 2>&1`
+                    echo $apistatus | grep "refused"
+                      if [ $? != 0 ] ; then
+                        break
+                      fi
+                     sleep 2
+                 done
+             }
+
+             wait_for_api
+
+             request_body=$(< <(cat <<EOF
+             {
+               "name": "$PACK",
+               "format": "conf"
+             }
+             EOF
+             ))
+
+             curl -s -k -X GET -u api:$VNS3PW -H 'Content-Type: application/json' -d "$request_body" https://$VNS3IP:8000/api/clientpack -o /etc/openvpn/$PACK.conf
+             echo "redirect-gateway def1" >> /etc/openvpn/$PACK.conf
+             echo "route 10.0.0.0 255.255.255.0 net_gateway" >> /etc/openvpn/$PACK.conf
+             systemctl -f enable openvpn@$PACK.service
+             systemctl start openvpn@$PACK
+             
+             touch /opt/firstrun
+
+             fi
+             }
+           -
+             VNS3IID: !Ref VNS3
+      SubnetId: !Ref SubnetAPrivate
+      Tags:
+      - Key: Name
+        Value: !Sub '${AWS::StackName}-host5'
+Outputs:
+  VNS3PublicIP:
+    Description: 'The Public IP of the VNS3 Network Controller'
+    Value: !Ref ElasticIPVNS3
+  VNS3InstanceID:
+    Description: 'The Instance ID and default password of the VNS3 Network Controller'
+    Value: !Ref VNS3
