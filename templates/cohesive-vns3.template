@@ -1,31 +1,80 @@
 ---
-AWSTemplateFormatVersion: '2010-09-09'
-Description: 'CloudFormation script to create one VNS3 free edition network controller with five amazon linux 2 overlay clients '
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation script to create one VNS3 free edition network controller with five Amazon Linux 2 overlay clients
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-      -
-        Label:
-          default: "VNS3 Configuration"
-        Parameters:
-          - VNS3InstanceTypeParameter
-          - AccessLocation
-      -
-        Label:
-          default: "EC2 Configuration"
-        Parameters:
-          - ClientInstanceTypeParameter
-          - KeyName
+    - Label:
+        default: Network Configuration
+      Parameters:
+        - VpcId
+        - PrivateSubnet1Id
+        - PrivateSubnet2Id
+        - PublicSubnet1Id
+        - PublicSubnet2Id
+        - RemoteAccessCidr
+    - Label:
+        default: Amazon EC2 Configuration
+      Parameters:
+        - ClientInstanceTypeParameter
+        - KeyPairName
+    - Label:
+        default: Cohesive Networks VNS3 Configuration
+      Parameters:
+        - VNS3InstanceTypeParameter
     ParameterLabels:
-      VNS3InstanceTypeParameter:
-        default: "VNS3 Instance Type"
+      VpcId:
+        default: VPC ID
+      PrivateSubnet1Id:
+        default: Private Subnet 1 ID
+      PrivateSubnet2Id:
+        default: Private Subnet 2 ID
+      PublicSubnet1Id:
+        default: Public Subnet 1 ID
+      PublicSubnet2Id:
+        default: Public Subnet 2 ID
+      RemoteAccessCidr:
+        default: Allowed External Access CIDR
       ClientInstanceTypeParameter:
-        default: "Overlay Clients Instance Type"
-      KeyName:
-        default: "SSH Key to use to access overlay clients"
-      SSHLocation:
-        default: "SSH IP Address Range"
-Parameters: 
+        default: Overlay Clients Instance Type
+      KeyPairName:
+        default: SSH Key Name
+      VNS3InstanceTypeParameter:
+        default: VNS3 Instance Type
+Parameters:
+  VpcId:
+    Description: ID of the VPC to deploy the VNS3 overlay network into
+    Type: AWS::EC2::VPC::Id
+  PrivateSubnet1Id:
+    Description: ID of private subnet 1 for the overlay clients
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2Id:
+    Description: ID of private subnet 2 for the overlay clients
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet1Id:
+    Description: ID of private subnet 1 for the VNS3 controllers
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet2Id:
+    Description: ID of private subnet 2 for the VNS3 controllers
+    Type: AWS::EC2::Subnet::Id
+  RemoteAccessCidr:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
+    Description: The CIDR IP range that is permitted to access the instances. We recommend
+      that you set this value to a trusted IP range.
+    Type: String
+  ClientInstanceTypeParameter:
+    Description: Enter t3.nano, t3.micro or t3.small. Default is t3.nano.
+    Type: String
+    Default: 't3.nano'
+    AllowedValues: 
+      - t3.nano
+      - t3.micro
+      - t3.small
+  KeyPairName:
+    Description: The name of an existing public/private key pair, which allows you
+      to securely connect to your instance after it launches
+    Type: AWS::EC2::KeyPair::KeyName
   VNS3InstanceTypeParameter:
     Description: 'Enter t3.nano, t3.micro or t3.small. Default is t3.micro.'
     Type: String
@@ -34,290 +83,109 @@ Parameters:
       - t3.nano
       - t3.micro
       - t3.small
-  ClientInstanceTypeParameter:
-    Description: 'Enter t3.nano, t3.micro or t3.small. Default is t3.nano.'
-    Type: String
-    Default: 't3.nano'
-    AllowedValues: 
-      - t3.nano
-      - t3.micro
-      - t3.small
-  KeyName:
-    Description: 'Name of an existing EC2 KeyPair to enable SSH access to the instance.'
-    Type: 'AWS::EC2::KeyPair::KeyName'
-    ConstraintDescription: 'must be the name of an existing EC2 KeyPair.'
-  AccessLocation:
-    Description: ' The IP address range that can be used to SSH to the EC2 instances'
-    Type: String
-    MinLength: '9'
-    MaxLength: '18'
-    Default: 0.0.0.0/0
-    AllowedPattern: '(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})'
-    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
-Conditions:
-  HasKeyName: !Not [!Equals [!Ref KeyName, '']]
 Mappings: 
   RegionMap: 
     ap-northeast-1: 
-      "VNS3": "ami-062ee71212081e280"
-      "AmzLnx2": "ami-0d7ed3ddb85b521a6"
+      VNS3: ami-062ee71212081e280
+      AmzLnx2: ami-0d7ed3ddb85b521a6
     ap-northeast-2: 
-      "VNS3": "ami-0fd184edabb67ff7c"
-      "AmzLnx2": "ami-018a9a930060d38aa"
+      VNS3: ami-0fd184edabb67ff7c
+      AmzLnx2: ami-018a9a930060d38aa
     ap-south-1: 
-      "VNS3": "ami-04fa3847f12179bbf"
-      "AmzLnx2": "ami-0937dcc711d38ef3f"
+      VNS3: ami-04fa3847f12179bbf
+      AmzLnx2: ami-0937dcc711d38ef3f
     ap-southeast-1: 
-      "VNS3": "ami-0f7fe0c9d55f5d94c"
-      "AmzLnx2": "ami-04677bdaa3c2b6e24"
+      VNS3: ami-0f7fe0c9d55f5d94c
+      AmzLnx2: ami-04677bdaa3c2b6e24
     ap-southeast-2: 
-      "VNS3": "ami-0f1e71713f4b94c86"
-      "AmzLnx2": "ami-0c9d48b5db609ad6e"
+      VNS3: ami-0f1e71713f4b94c86
+      AmzLnx2: ami-0c9d48b5db609ad6e
     ca-central-1: 
-      "VNS3": "ami-0724736041a6dd69a"
-      "AmzLnx2": "ami-0de8b8e4bc1f125fe"
+      VNS3: ami-0724736041a6dd69a
+      AmzLnx2: ami-0de8b8e4bc1f125fe
     eu-central-1: 
-      "VNS3": "ami-07f43803c8e29a819"
-      "AmzLnx2": "ami-0eaec5838478eb0ba"
+      VNS3: ami-07f43803c8e29a819
+      AmzLnx2: ami-0eaec5838478eb0ba
     eu-north-1:
-      "VNS3": "ami-48169836"
-      "AmzLnx2": "ami-6d27a913"
+      VNS3: ami-48169836
+      AmzLnx2: ami-6d27a913
     eu-west-1: 
-      "VNS3": "ami-010e25e412e24fa22"
-      "AmzLnx2": "ami-0fad7378adf284ce0"
+      VNS3: ami-010e25e412e24fa22
+      AmzLnx2: ami-0fad7378adf284ce0
     eu-west-2:
-      "VNS3": "ami-08386e5e061446106"
-      "AmzLnx2": "ami-0664a710233d7c148"
+      VNS3: ami-08386e5e061446106
+      AmzLnx2: ami-0664a710233d7c148
     eu-west-3:
-      "VNS3": "ami-01450508266d05894"
-      "AmzLnx2": "ami-0854d53ce963f69d8"
+      VNS3: ami-01450508266d05894
+      AmzLnx2: ami-0854d53ce963f69d8
     sa-east-1:
-      "VNS3": "ami-0e49820c14755c6c8"
-      "AmzLnx2": "ami-0b04450959586da29"
+      VNS3: ami-0e49820c14755c6c8
+      AmzLnx2: ami-0b04450959586da29
     us-east-1:
-      "VNS3": "ami-0f1cb9aac86bfdd40"
-      "AmzLnx2": "ami-035be7bafff33b6b6"
+      VNS3: ami-0f1cb9aac86bfdd40
+      AmzLnx2: ami-035be7bafff33b6b6
     us-east-2:
-      "VNS3": "ami-0237b7b3cb0eba5f5"
-      "AmzLnx2": "ami-04328208f4f0cf1fe"
+      VNS3: ami-0237b7b3cb0eba5f5
+      AmzLnx2: ami-04328208f4f0cf1fe
     us-west-1:
-      "VNS3": "ami-021d86dbbb378d6c9"
-      "AmzLnx2": "ami-0799ad445b5727125"
+      VNS3: ami-021d86dbbb378d6c9
+      AmzLnx2: ami-0799ad445b5727125
     us-west-2:
-      "VNS3": "ami-094fd4b3d43102d26"
-      "AmzLnx2": "ami-032509850cf9ee54e"
+      VNS3: ami-094fd4b3d43102d26
+      AmzLnx2: ami-032509850cf9ee54e
 Resources:
-  VPC:
-    Type: 'AWS::EC2::VPC'
-    Properties:
-      CidrBlock: '10.0.0.0/24'
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
-      InstanceTenancy: default
-      Tags:
-      - Key: Name
-        Value: !Sub '${AWS::StackName}'
-  InternetGateway:
-    Type: 'AWS::EC2::InternetGateway'
-    Properties:
-      Tags:
-      - Key: Name
-        Value: !Sub '${AWS::StackName}'
-  VPCGatewayAttachment:
-    Type: 'AWS::EC2::VPCGatewayAttachment'
-    Properties:
-      VpcId: !Ref VPC
-      InternetGatewayId: !Ref InternetGateway
-  NAT:
-    DependsOn: VPCGatewayAttachment
-    Type: AWS::EC2::NatGateway
-    Properties: 
-      AllocationId:
-        Fn::GetAtt:
-        - ElasticIPNATGW
-        - AllocationId
-      SubnetId:
-        Ref: SubnetAPublic
-      Tags: 
-        - Key: Name
-          Value: !Sub '${AWS::StackName}'
-  SubnetAPublic:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      AvailabilityZone: !Select [0, !GetAZs '']
-      CidrBlock: '10.0.0.0/28'
-      MapPublicIpOnLaunch: true
-      VpcId: !Ref VPC
-      Tags:
-      - Key: Name
-        Value: 'A public'
-      - Key: Reach
-        Value: public
-  SubnetAPrivate:
-    Type: 'AWS::EC2::Subnet'
-    Properties:
-      AvailabilityZone: !Select [0, !GetAZs '']
-      CidrBlock: '10.0.0.32/28'
-      VpcId: !Ref VPC
-      Tags:
-      - Key: Name
-        Value: 'A private'
-      - Key: Reach
-        Value: private
-  RouteTableAPublic:
-    Type: 'AWS::EC2::RouteTable'
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-      - Key: Name
-        Value: 'A Public'
-  RouteTableAPrivate:
-    Type: 'AWS::EC2::RouteTable'
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-      - Key: Name
-        Value: 'A Private'
-  RouteTableAssociationAPublic:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
-    Properties:
-      SubnetId: !Ref SubnetAPublic
-      RouteTableId: !Ref RouteTableAPublic
-  RouteTableAssociationAPrivate:
-    Type: 'AWS::EC2::SubnetRouteTableAssociation'
-    Properties:
-      SubnetId: !Ref SubnetAPrivate
-      RouteTableId: !Ref RouteTableAPrivate
-  RouteTablePublicAInternetRoute:
-    Type: 'AWS::EC2::Route'
-    DependsOn: VPCGatewayAttachment
-    Properties:
-      RouteTableId: !Ref RouteTableAPublic
-      DestinationCidrBlock: '0.0.0.0/0'
-      GatewayId: !Ref InternetGateway
-  RouteTablePrivateAInternetRoute:
-    Type: 'AWS::EC2::Route'
-    DependsOn: VPCGatewayAttachment
-    Properties:
-      RouteTableId: !Ref RouteTableAPrivate
-      DestinationCidrBlock: '0.0.0.0/0'
-      NatGatewayId: !Ref NAT
-  NetworkAclPublic:
-    Type: 'AWS::EC2::NetworkAcl'
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-      - Key: Name
-        Value: Public
-  NetworkAclPrivate:
-    Type: 'AWS::EC2::NetworkAcl'
-    Properties:
-      VpcId: !Ref VPC
-      Tags:
-      - Key: Name
-        Value: Private
-  SubnetNetworkAclAssociationAPublic:
-    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
-    Properties:
-      SubnetId: !Ref SubnetAPublic
-      NetworkAclId: !Ref NetworkAclPublic
-  SubnetNetworkAclAssociationAPrivate:
-    Type: 'AWS::EC2::SubnetNetworkAclAssociation'
-    Properties:
-      SubnetId: !Ref SubnetAPrivate
-      NetworkAclId: !Ref NetworkAclPrivate
-  NetworkAclEntryInPublicAllowAll:
-    Type: 'AWS::EC2::NetworkAclEntry'
-    Properties:
-      NetworkAclId: !Ref NetworkAclPublic
-      RuleNumber: 99
-      Protocol: -1
-      RuleAction: allow
-      Egress: false
-      CidrBlock: '0.0.0.0/0'
-  NetworkAclEntryOutPublicAllowAll:
-    Type: 'AWS::EC2::NetworkAclEntry'
-    Properties:
-      NetworkAclId: !Ref NetworkAclPublic
-      RuleNumber: 99
-      Protocol: -1
-      RuleAction: allow
-      Egress: true
-      CidrBlock: '0.0.0.0/0'
-  NetworkAclEntryInPrivateAllowVPC:
-    Type: 'AWS::EC2::NetworkAclEntry'
-    Properties:
-      NetworkAclId: !Ref NetworkAclPrivate
-      RuleNumber: 99
-      Protocol: -1
-      RuleAction: allow
-      Egress: false
-      CidrBlock: '0.0.0.0/0'
-  NetworkAclEntryOutPrivateAllowVPC:
-    Type: 'AWS::EC2::NetworkAclEntry'
-    Properties:
-      NetworkAclId: !Ref NetworkAclPrivate
-      RuleNumber: 99
-      Protocol: -1
-      RuleAction: allow
-      Egress: true
-      CidrBlock: '0.0.0.0/0'
   ElasticIPVNS3:
-    Type: 'AWS::EC2::EIP'
-    Properties:
-      Domain: vpc
-  ElasticIPNATGW:
-    Type: 'AWS::EC2::EIP'
+    Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
   VNS3SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: !Sub '${AWS::StackName}'
-      VpcId: !Ref VPC
+      GroupDescription: !Sub ${AWS::StackName}
+      VpcId: !Ref VpcId
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-VNS3'
+        Value: !Sub ${AWS::StackName}-VNS3
   SecurityGroup8000Pub:
-    Type: 'AWS::EC2::SecurityGroupIngress'
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref VNS3SecurityGroup
       IpProtocol: tcp
       FromPort: 8000
       ToPort: 8000
-      CidrIp: !Ref AccessLocation
+      CidrIp: !Ref RemoteAccessCidr
   SecurityGroup22Pub:
-    Type: 'AWS::EC2::SecurityGroupIngress'
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref VNS3SecurityGroup
       IpProtocol: tcp
       FromPort: 22
       ToPort: 22
-      CidrIp: !Ref AccessLocation
+      CidrIp: !Ref RemoteAccessCidr
   SecurityGroup8000Priv:
-    Type: 'AWS::EC2::SecurityGroupIngress'
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref VNS3SecurityGroup
       IpProtocol: tcp
       FromPort: 8000
       ToPort: 8000
-      CidrIp: '10.0.0.32/28'
+      CidrIp: 10.0.0.32/28
   SecurityGroup1194Priv:
-    Type: 'AWS::EC2::SecurityGroupIngress'
+    Type: AWS::EC2::SecurityGroupIngress
     Properties:
       GroupId: !Ref VNS3SecurityGroup
       IpProtocol: udp
       FromPort: 1194
       ToPort: 1194
-      CidrIp: '10.0.0.32/28'
+      CidrIp: 10.0.0.32/28
   HOSTSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: !Sub '${AWS::StackName}'
-      VpcId: !Ref VPC
+      GroupDescription: !Sub ${AWS::StackName}
+      VpcId: !Ref VpcId
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-host'
+        Value: !Sub ${AWS::StackName}-host
   VNS3RecoveryTestAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -325,53 +193,45 @@ Resources:
       Namespace: AWS/EC2
       MetricName: StatusCheckFailed_System
       Statistic: Minimum
-      Period: '60'
-      EvaluationPeriods: '2'
+      Period: 60
+      EvaluationPeriods: 2
       ComparisonOperator: GreaterThanThreshold
-      Threshold: '0'
-      AlarmActions: [ !Sub "arn:aws:automate:${AWS::Region}:ec2:recover" ]
+      Threshold: 0
+      AlarmActions: 
+        - !Sub 'arn:aws:automate:${AWS::Region}:ec2:recover'
       Dimensions:
       - Name: InstanceId
         Value:
           Ref: VNS3
   VNS3:
-    Type: 'AWS::EC2::Instance'
+    Type: AWS::EC2::Instance
     Properties:
-      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", VNS3]
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', VNS3 ]
       InstanceType: !Ref VNS3InstanceTypeParameter
+      KeyName: !Ref KeyPairName
+      PrivateIpAddress: 10.0.0.5
       SecurityGroupIds:
       - !Ref VNS3SecurityGroup
-      SubnetId: !Ref SubnetAPublic
-      PrivateIpAddress: '10.0.0.5'
       SourceDestCheck: False
+      SubnetId: !Ref PublicSubnet1Id
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-vns3'
+        Value: !Sub ${AWS::StackName}-vns3
   IPAssoc:
-    Type: 'AWS::EC2::EIPAssociation'
+    Type: AWS::EC2::EIPAssociation
     Properties:
       InstanceId: !Ref VNS3
       AllocationId: !GetAtt ElasticIPVNS3.AllocationId
   HOST1:
-    Type: 'AWS::EC2::Instance'
-    Metadata:
-      AWS::CloudFormation::Init:
-        configSets:
-          quickstart:
-          - install
-          - configure
-          - cleanup
-        install: {}
-        configure: {}
-        cleanup: {}
+    Type: AWS::EC2::Instance
     Properties:
-      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AmzLnx2]
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx2 ]
       InstanceType: !Ref ClientInstanceTypeParameter
       SecurityGroupIds:
       - !Ref HOSTSecurityGroup
-      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      KeyName: !Ref KeyPairName
       UserData:
-        'Fn::Base64': !Sub
+        Fn::Base64: !Sub
            - |
              #!/bin/bash -x
 
@@ -383,7 +243,7 @@ Resources:
              yum install -y openvpn
 
              PACK=100_127_255_193
-             VNS3IP=10.0.0.5
+             VNS3IP=${VNS3IIP}
              VNS3PW=${VNS3IID}
 
              wait_for_api () {
@@ -422,32 +282,23 @@ Resources:
              fi
              }
            -
+             VNS3IIP: !GetAtt VNS3.PrivateIp
              VNS3IID: !Ref VNS3
-      SubnetId: !Ref SubnetAPrivate
+      SubnetId: !Ref PrivateSubnet1Id
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-host1'
+        Value: !Sub ${AWS::StackName}-host1
 
   HOST2:
-    Type: 'AWS::EC2::Instance'
-    Metadata:
-      AWS::CloudFormation::Init:
-        configSets:
-          quickstart:
-          - install
-          - configure
-          - cleanup
-        install: {}
-        configure: {}
-        cleanup: {}
+    Type: AWS::EC2::Instance
     Properties:
-      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AmzLnx2]
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx2 ]
       InstanceType: !Ref ClientInstanceTypeParameter
       SecurityGroupIds:
       - !Ref HOSTSecurityGroup
-      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      KeyName: !Ref KeyPairName
       UserData:
-        'Fn::Base64': !Sub
+        Fn::Base64: !Sub
            - |
              #!/bin/bash -x
 
@@ -459,7 +310,7 @@ Resources:
              yum install openvpn -y
 
              PACK=100_127_255_194
-             VNS3IP=10.0.0.5
+             VNS3IP=${VNS3IIP}
              VNS3PW=${VNS3IID}
 
              wait_for_api () {
@@ -495,31 +346,22 @@ Resources:
              fi
              }
            -
+             VNS3IIP: !GetAtt VNS3.PrivateIp
              VNS3IID: !Ref VNS3
-      SubnetId: !Ref SubnetAPrivate
+      SubnetId: !Ref PrivateSubnet1Id
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-host2'
+        Value: !Sub ${AWS::StackName}-host2
   HOST3:
-    Type: 'AWS::EC2::Instance'
-    Metadata:
-      AWS::CloudFormation::Init:
-        configSets:
-          quickstart:
-          - install
-          - configure
-          - cleanup
-        install: {}
-        configure: {}
-        cleanup: {}
+    Type: AWS::EC2::Instance
     Properties:
-      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AmzLnx2]
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx2 ]
       InstanceType: !Ref ClientInstanceTypeParameter
       SecurityGroupIds:
       - !Ref HOSTSecurityGroup
-      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      KeyName: !Ref KeyPairName
       UserData:
-        'Fn::Base64': !Sub
+        Fn::Base64: !Sub
            - |
              #!/bin/bash -x
 
@@ -531,7 +373,7 @@ Resources:
              yum install openvpn -y
 
              PACK=100_127_255_195
-             VNS3IP=10.0.0.5
+             VNS3IP=${VNS3IIP}
              VNS3PW=${VNS3IID}
 
              wait_for_api () {
@@ -567,31 +409,22 @@ Resources:
              fi
              }
            -
+             VNS3IIP: !GetAtt VNS3.PrivateIp
              VNS3IID: !Ref VNS3
-      SubnetId: !Ref SubnetAPrivate
+      SubnetId: !Ref PrivateSubnet1Id
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-host3'
+        Value: !Sub ${AWS::StackName}-host3
   HOST4:
-    Type: 'AWS::EC2::Instance'
-    Metadata:
-      AWS::CloudFormation::Init:
-        configSets:
-          quickstart:
-          - install
-          - configure
-          - cleanup
-        install: {}
-        configure: {}
-        cleanup: {}
+    Type: AWS::EC2::Instance
     Properties:
-      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AmzLnx2]
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx2 ]
       InstanceType: !Ref ClientInstanceTypeParameter
       SecurityGroupIds:
       - !Ref HOSTSecurityGroup
-      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      KeyName: !Ref KeyPairName
       UserData:
-        'Fn::Base64': !Sub
+        Fn::Base64: !Sub
            - |
              #!/bin/bash -x
 
@@ -603,7 +436,7 @@ Resources:
              yum install openvpn -y
 
              PACK=100_127_255_196
-             VNS3IP=10.0.0.5
+             VNS3IP=${VNS3IIP}
              VNS3PW=${VNS3IID}
 
              wait_for_api () {
@@ -639,31 +472,22 @@ Resources:
              fi
              }
            -
+             VNS3IIP: !GetAtt VNS3.PrivateIp
              VNS3IID: !Ref VNS3
-      SubnetId: !Ref SubnetAPrivate
+      SubnetId: !Ref PrivateSubnet2Id
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-host4'
+        Value: !Sub ${AWS::StackName}-host4
   HOST5:
     Type: 'AWS::EC2::Instance'
-    Metadata:
-      AWS::CloudFormation::Init:
-        configSets:
-          quickstart:
-          - install
-          - configure
-          - cleanup
-        install: {}
-        configure: {}
-        cleanup: {}
     Properties:
-      ImageId: !FindInMap [RegionMap, !Ref "AWS::Region", AmzLnx2]
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx2 ]
       InstanceType: !Ref ClientInstanceTypeParameter
       SecurityGroupIds:
       - !Ref HOSTSecurityGroup
-      KeyName: !If [HasKeyName, !Ref KeyName, !Ref 'AWS::NoValue']
+      KeyName: !Ref KeyPairName
       UserData:
-        'Fn::Base64': !Sub
+        Fn::Base64: !Sub
            - |
              #!/bin/bash -x
 
@@ -675,7 +499,7 @@ Resources:
              yum install openvpn -y
 
              PACK=100_127_255_197
-             VNS3IP=10.0.0.5
+             VNS3IP=${VNS3IIP}
              VNS3PW=${VNS3IID}
 
              wait_for_api () {
@@ -711,15 +535,16 @@ Resources:
              fi
              }
            -
+             VNS3IIP: !GetAtt VNS3.PrivateIp
              VNS3IID: !Ref VNS3
-      SubnetId: !Ref SubnetAPrivate
+      SubnetId: !Ref PrivateSubnet2Id
       Tags:
       - Key: Name
-        Value: !Sub '${AWS::StackName}-host5'
+        Value: !Sub ${AWS::StackName}-host5
 Outputs:
   VNS3PublicIP:
-    Description: 'The Public IP of the VNS3 Network Controller'
+    Description: The Public IP of the VNS3 Network Controller
     Value: !Ref ElasticIPVNS3
   VNS3InstanceID:
-    Description: 'The Instance ID and default password of the VNS3 Network Controller'
+    Description: The Instance ID and default password of the VNS3 Network Controller
     Value: !Ref VNS3
