@@ -233,7 +233,8 @@ Resources:
       UserData:
         Fn::Base64: !Sub
            - |
-             #!/bin/bash -x
+             #!/bin/bash -e
+             set -x
 
              {
              if [ ! -f /opt/firstrun ]; then
@@ -300,7 +301,8 @@ Resources:
       UserData:
         Fn::Base64: !Sub
            - |
-             #!/bin/bash -x
+             #!/bin/bash -e
+             set -x
 
              {
              if [ ! -f /opt/firstrun ]; then
@@ -363,7 +365,8 @@ Resources:
       UserData:
         Fn::Base64: !Sub
            - |
-             #!/bin/bash -x
+             #!/bin/bash -e
+             set -x
 
              {
              if [ ! -f /opt/firstrun ]; then
@@ -426,7 +429,8 @@ Resources:
       UserData:
         Fn::Base64: !Sub
            - |
-             #!/bin/bash -x
+             #!/bin/bash -e
+             set -x
 
              {
              if [ ! -f /opt/firstrun ]; then
@@ -489,7 +493,8 @@ Resources:
       UserData:
         Fn::Base64: !Sub
            - |
-             #!/bin/bash -x
+             #!/bin/bash -e
+             set -x
 
              {
              if [ ! -f /opt/firstrun ]; then
@@ -542,9 +547,9 @@ Resources:
       - Key: Name
         Value: !Sub ${AWS::StackName}-host5
 Outputs:
-  VNS3PublicIP:
+  VNS3PublicIp:
     Description: The Public IP of the VNS3 Network Controller
     Value: !Ref ElasticIPVNS3
-  VNS3InstanceID:
+  VNS3InstanceId:
     Description: The Instance ID and default password of the VNS3 Network Controller
     Value: !Ref VNS3

@@ -74,7 +74,7 @@ Parameters:
   PrivateSubnet2CIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.48.0/28
+    Default: 10.0.0.48/28
     Description: CIDR block for private subnet 2 located in Availability Zone 2
     Type: String
   PublicSubnet1CIDR:
@@ -152,6 +152,7 @@ Resources:
     Properties:
       TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/cohesive-vns3.template
       Parameters:
+        VpcId: !GetAtt VPCStack.Outputs.VPCID
         PrivateSubnet1Id: !GetAtt VPCStack.Outputs.PrivateSubnet1AID
         PrivateSubnet2Id: !GetAtt VPCStack.Outputs.PrivateSubnet2AID
         PublicSubnet1Id: !GetAtt VPCStack.Outputs.PublicSubnet1ID
