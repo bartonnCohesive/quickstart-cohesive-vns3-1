@@ -13,6 +13,7 @@ Metadata:
         - PublicSubnet1Id
         - PublicSubnet2Id
         - RemoteAccessCidr
+        - BastionSecurityGroupID
     - Label:
         default: Amazon EC2 Configuration
       Parameters:
@@ -40,6 +41,8 @@ Metadata:
         default: Public Subnet 2 ID
       RemoteAccessCidr:
         default: Allowed External Access CIDR
+      BastionSecurityGroupID:
+        default: Bastion Security Group
       ClientInstanceTypeParameter:
         default: Overlay Clients Instance Type
       KeyPairName:
@@ -72,6 +75,9 @@ Parameters:
     Description: The CIDR IP range that is permitted to access the instances. We recommend
       that you set this value to a trusted IP range.
     Type: String
+  BastionSecurityGroupID:
+    Description: Security group of a bastion instance to allow SSH access to client instances.
+    Type: AWS::EC2::SecurityGroup::Id
   ClientInstanceTypeParameter:
     Description: Enter t3.nano, t3.micro or t3.small. Default is t3.nano.
     Type: String
@@ -178,6 +184,11 @@ Resources:
       SecurityGroupEgress:
       - CidrIp: 0.0.0.0/0
         IpProtocol: '-1'
+      SecurityGroupIngress:
+      - FromPort: 22
+        IpProtocol: tcp
+        SourceSecurityGroupId: !Ref BastionSecurityGroupID
+        ToPort: 22
       Tags:
       - Key: Name
         Value: !Sub ${AWS::StackName}-host

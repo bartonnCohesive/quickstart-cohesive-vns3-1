@@ -154,6 +154,20 @@ Resources:
         PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
         PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
         VPCCIDR: !Ref VPCCIDR
+  BastionStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/submodules/quickstart-linux-bastion/templates/linux-bastion.template
+        - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
+      Parameters:
+        EnableTCPForwarding: 'true'
+        EnableX11Forwarding: 'true'
+        KeyPairName: !Ref KeyPairName
+        PublicSubnet1ID: !GetAtt VPCStack.Outputs.PublicSubnet1ID
+        PublicSubnet2ID: !GetAtt VPCStack.Outputs.PublicSubnet2ID
+        RemoteAccessCIDR: !Ref RemoteAccessCidr
+        VPCID: !GetAtt VPCStack.Outputs.VPCID
   VNS3Stack:
     Type: AWS::CloudFormation::Stack
     Properties:
@@ -167,6 +181,7 @@ Resources:
         PublicSubnet1Id: !GetAtt VPCStack.Outputs.PublicSubnet1ID
         PublicSubnet2Id: !GetAtt VPCStack.Outputs.PublicSubnet2ID
         RemoteAccessCidr: !Ref RemoteAccessCidr
+        BastionSecurityGroupID: !GetAtt BastionStack.Outputs.BastionSecurityGroupID
         ClientInstanceTypeParameter: !Ref ClientInstanceTypeParameter
         KeyPairName: !Ref KeyPairName
         QSS3BucketName: !Ref QSS3BucketName
