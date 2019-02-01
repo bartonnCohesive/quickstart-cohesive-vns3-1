@@ -129,16 +129,23 @@ Parameters:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and forward slash (/).
-    Default: quickstart-cohesive-vns3/
+    Default: quickstart-cohesive-vns3
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
     Type: String
+Conditions:
+  GovCloudCondition:
+    !Or
+      - !Equals [!Ref 'AWS::Region', us-gov-east-1]
+      - !Equals [!Ref 'AWS::Region', us-gov-west-1]
 Resources:
   VPCStack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/submodules/quickstart-aws-vpc/templates/aws-vpc.template
+        - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
       Parameters:
         AvailabilityZones: !Join [ ',', !Ref AvailabilityZones ]
         NumberOfAZs: '2'
@@ -147,10 +154,26 @@ Resources:
         PublicSubnet1CIDR: !Ref PublicSubnet1CIDR
         PublicSubnet2CIDR: !Ref PublicSubnet2CIDR
         VPCCIDR: !Ref VPCCIDR
+  BastionStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/submodules/quickstart-linux-bastion/templates/linux-bastion.template
+        - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
+      Parameters:
+        EnableTCPForwarding: 'true'
+        EnableX11Forwarding: 'true'
+        KeyPairName: !Ref KeyPairName
+        PublicSubnet1ID: !GetAtt VPCStack.Outputs.PublicSubnet1ID
+        PublicSubnet2ID: !GetAtt VPCStack.Outputs.PublicSubnet2ID
+        RemoteAccessCIDR: !Ref RemoteAccessCidr
+        VPCID: !GetAtt VPCStack.Outputs.VPCID
   VNS3Stack:
     Type: AWS::CloudFormation::Stack
     Properties:
-      TemplateURL: !Sub https://${QSS3BucketName}.s3.amazonaws.com/${QSS3KeyPrefix}templates/cohesive-vns3.template
+      TemplateURL: !Sub
+        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/templates/cohesive-vns3.template
+        - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
       Parameters:
         VpcId: !GetAtt VPCStack.Outputs.VPCID
         PrivateSubnet1Id: !GetAtt VPCStack.Outputs.PrivateSubnet1AID
@@ -158,8 +181,11 @@ Resources:
         PublicSubnet1Id: !GetAtt VPCStack.Outputs.PublicSubnet1ID
         PublicSubnet2Id: !GetAtt VPCStack.Outputs.PublicSubnet2ID
         RemoteAccessCidr: !Ref RemoteAccessCidr
+        BastionSecurityGroupID: !GetAtt BastionStack.Outputs.BastionSecurityGroupID
         ClientInstanceTypeParameter: !Ref ClientInstanceTypeParameter
         KeyPairName: !Ref KeyPairName
+        QSS3BucketName: !Ref QSS3BucketName
+        QSS3KeyPrefix: !Ref QSS3KeyPrefix
         VNS3InstanceTypeParameter: !Ref VNS3InstanceTypeParameter
 Outputs:
   VNS3PublicIp:
