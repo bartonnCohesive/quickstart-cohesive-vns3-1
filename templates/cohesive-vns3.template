@@ -1,0 +1,778 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudFormation script to create one VNS3 free edition network controller with five Amazon Linux 2 overlay clients
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Network Configuration
+      Parameters:
+        - VpcId
+        - PrivateSubnet1Id
+        - PrivateSubnet2Id
+        - PublicSubnet1Id
+        - PublicSubnet2Id
+        - RemoteAccessCidr
+        - BastionSecurityGroupID
+    - Label:
+        default: Amazon EC2 Configuration
+      Parameters:
+        - ClientInstanceTypeParameter
+        - KeyPairName
+    - Label:
+        default: Cohesive Networks VNS3 Configuration
+      Parameters:
+        - VNS3InstanceTypeParameter
+    - Label:
+        default: AWS Quick Start Configuration
+      Parameters:
+        - QSS3BucketName
+        - QSS3KeyPrefix
+    ParameterLabels:
+      VpcId:
+        default: VPC ID
+      PrivateSubnet1Id:
+        default: Private Subnet 1 ID
+      PrivateSubnet2Id:
+        default: Private Subnet 2 ID
+      PublicSubnet1Id:
+        default: Public Subnet 1 ID
+      PublicSubnet2Id:
+        default: Public Subnet 2 ID
+      RemoteAccessCidr:
+        default: Allowed External Access CIDR
+      BastionSecurityGroupID:
+        default: Bastion Security Group
+      ClientInstanceTypeParameter:
+        default: Overlay Clients Instance Type
+      KeyPairName:
+        default: SSH Key Name
+      VNS3InstanceTypeParameter:
+        default: VNS3 Instance Type
+      QSS3BucketName:
+        default: Quick Start S3 Bucket Name
+      QSS3KeyPrefix:
+        default: Quick Start S3 Key Prefix
+Parameters:
+  VpcId:
+    Description: ID of the VPC to deploy the VNS3 overlay network into
+    Type: AWS::EC2::VPC::Id
+  VPCCIDR:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
+    Default: 10.0.0.0/24
+    Description: CIDR block for the VPC
+    Type: String
+  PrivateSubnet1Id:
+    Description: ID of private subnet 1 for the overlay clients
+    Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2Id:
+    Description: ID of private subnet 2 for the overlay clients
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet1Id:
+    Description: ID of private subnet 1 for the VNS3 controllers
+    Type: AWS::EC2::Subnet::Id
+  PublicSubnet2Id:
+    Description: ID of private subnet 2 for the VNS3 controllers
+    Type: AWS::EC2::Subnet::Id
+  RemoteAccessCidr:
+    AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
+    ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
+    Description: The CIDR IP range that is permitted to access the instances. We recommend
+      that you set this value to a trusted IP range.
+    Type: String
+  BastionSecurityGroupID:
+    Description: Security group of a bastion instance to allow SSH access to client instances.
+    Type: AWS::EC2::SecurityGroup::Id
+  ClientInstanceTypeParameter:
+    Description: Enter t3.nano, t3.micro or t3.small. Default is t3.nano.
+    Type: String
+    Default: 't3.nano'
+    AllowedValues: 
+      - t3.nano
+      - t3.micro
+      - t3.small
+  KeyPairName:
+    Description: The name of an existing public/private key pair, which allows you
+      to securely connect to your instance after it launches
+    Type: AWS::EC2::KeyPair::KeyName
+  VNS3InstanceTypeParameter:
+    Description: 'Enter t3.nano, t3.micro or t3.small. Default is t3.micro.'
+    Type: String
+    Default: 't3.micro'
+    AllowedValues: 
+      - t3.nano
+      - t3.micro
+      - t3.small
+  QSS3BucketName:
+    AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
+    ConstraintDescription: Quick Start bucket name can include numbers, lowercase
+      letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
+      (-).
+    Default: aws-quickstart
+    Description: S3 bucket name for the Quick Start assets. This string can include
+      numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start
+      or end with a hyphen (-).
+    Type: String
+  QSS3KeyPrefix:
+    AllowedPattern: ^[0-9a-zA-Z-/]*$
+    ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
+      uppercase letters, hyphens (-), and forward slash (/).
+    Default: quickstart-cohesive-vns3
+    Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
+      can include numbers, lowercase letters, uppercase letters, hyphens (-), and
+      forward slash (/).
+    Type: String
+  ClientCount:
+    Default: 1
+    Description: Enter the number of overlay clients to launch.
+    MaxValue: 1
+    MinValue: 1
+    Type: Number
+  OVERLAY1:
+    Default: '100_127_255_193'
+    Type: String
+  OVERLAY2:
+    Default: '100_127_255_194'
+    Type: String
+  OVERLAY3:
+    Default: '100_127_255_195'
+    Type: String
+  OVERLAY4:
+    Default: '100_127_255_196'
+    Type: String
+  OVERLAY5:
+    Default: '100_127_255_197'
+    Type: String
+  ASGCOOLDOWN:
+    Default: '10'
+    Type: String
+Conditions:
+  GovCloudCondition:
+    !Or
+      - !Equals [!Ref 'AWS::Region', us-gov-east-1]
+      - !Equals [!Ref 'AWS::Region', us-gov-west-1]
+Mappings: 
+  RegionMap: 
+    ap-northeast-1: 
+      VNS3: ami-08694490f0d884a29
+      AmzLnx: ami-00a5245b4816c38e6
+    ap-northeast-2: 
+      VNS3: ami-051991cb484814f84
+      AmzLnx: ami-00dc207f8ba6dc919
+    ap-south-1: 
+      VNS3: ami-00bbfe7a7b8cefbfc
+      AmzLnx: ami-0ad42f4f66f6c1cc9
+    ap-southeast-1: 
+      VNS3: ami-09284871b1cc5a4d3
+      AmzLnx: ami-05b3bcf7f311194b3
+    ap-southeast-2: 
+      VNS3: ami-04d119d7d801156a8
+      AmzLnx: ami-02fd0b06f06d93dfc
+    ca-central-1: 
+      VNS3: ami-0fc459114984dc7d2
+      AmzLnx: ami-07423fb63ea0a0930
+    eu-central-1: 
+      VNS3: ami-0f2d67aaf98b138e7
+      AmzLnx: ami-0cfbf4f6db41068ac
+    eu-north-1:
+      VNS3: ami-5bf87125
+      AmzLnx: ami-86fe70f8
+    eu-west-1: 
+      VNS3: ami-076e83bf71054765c
+      AmzLnx: ami-08935252a36e25f85
+    eu-west-2:
+      VNS3: ami-0988821d559fb6f89
+      AmzLnx: ami-01419b804382064e4
+    eu-west-3:
+      VNS3: ami-05614ada9053bf8f9
+      AmzLnx: ami-0dd7e7ed60da8fb83
+    sa-east-1:
+      VNS3: ami-098aa3368855c893b
+      AmzLnx: ami-05145e0b28ad8e0b2
+    us-east-1:
+      VNS3: ami-0c367aa0344dd6e72
+      AmzLnx: ami-0080e4c5bc078760e
+    us-east-2:
+      VNS3: ami-0c4fa462270811c7c
+      AmzLnx: ami-0cd3dfa4e37921605
+    us-west-1:
+      VNS3: ami-091eafd04ef724b53
+      AmzLnx: ami-0ec6517f6edbf8044
+    us-west-2:
+      VNS3: ami-0786d5a9d9daf3a3f
+      AmzLnx: ami-01e24be29428c15b2
+Resources:
+  ElasticIPVNS3:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+  ClientSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub ${AWS::StackName}
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: '-1'
+      SecurityGroupIngress:
+      - FromPort: 22
+        IpProtocol: tcp
+        SourceSecurityGroupId: !Ref BastionSecurityGroupID
+        ToPort: 22
+      Tags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-host
+      VpcId: !Ref VpcId
+  VNS3SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: !Sub ${AWS::StackName}
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: '-1'
+      SecurityGroupIngress:
+      - FromPort: 1194
+        IpProtocol: udp
+        SourceSecurityGroupId: !Ref ClientSecurityGroup
+        ToPort: 1194
+      - FromPort: 8000
+        IpProtocol: tcp
+        SourceSecurityGroupId: !Ref ClientSecurityGroup
+        ToPort: 8000
+      - CidrIp: !Ref RemoteAccessCidr
+        FromPort: 22
+        IpProtocol: tcp
+        ToPort: 22
+      - CidrIp: !Ref RemoteAccessCidr
+        FromPort: 8000
+        IpProtocol: tcp
+        ToPort: 8000
+      Tags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-VNS3
+      VpcId: !Ref VpcId
+  VNS3RecoveryTestAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: Trigger a recovery when instance status check fails for 2 consecutive minutes.
+      Namespace: AWS/EC2
+      MetricName: StatusCheckFailed_System
+      Statistic: Minimum
+      Period: 60
+      EvaluationPeriods: 2
+      ComparisonOperator: GreaterThanThreshold
+      Threshold: 0
+      AlarmActions: 
+        - !Sub 'arn:aws:automate:${AWS::Region}:ec2:recover'
+      Dimensions:
+      - Name: InstanceId
+        Value:
+          Ref: VNS3
+  VNS3:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', VNS3 ]
+      InstanceType: !Ref VNS3InstanceTypeParameter
+      KeyName: !Ref KeyPairName
+      SecurityGroupIds:
+      - !Ref VNS3SecurityGroup
+      SourceDestCheck: False
+      SubnetId: !Ref PublicSubnet1Id
+      Tags:
+      - Key: Name
+        Value: !Sub ${AWS::StackName}-VNS3
+  IPAssoc:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      InstanceId: !Ref VNS3
+      AllocationId: !GetAtt ElasticIPVNS3.AllocationId
+  ClientRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action: sts:AssumeRole
+      Policies:
+      - PolicyName: S3Access
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Resource: !Sub arn:aws:s3:::${QSS3BucketName}/${QSS3KeyPrefix}/*
+            Action: s3:GetObject
+  ClientProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref ClientRole
+  Client1LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Authentication:
+        S3Credentials:
+          buckets:
+            - !Ref QSS3BucketName
+          roleName: !Ref ClientRole
+          type: S3
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              openvpn: []
+          services:
+            sysvinit:
+              cfn-hup:
+                  enabled: true
+                  ensureRunning: true
+                  files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+              openvpn:
+                enabled: 'true'
+                ensureRunning: 'true'
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.VirtualMachine.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=VirtualMachine
+                runas=root
+            /tmp/client-bootstrap.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+          commands:
+            b-bootstrap:
+              command: /tmp/client-bootstrap.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR 
+                VNS3OVERLAYIP: !Ref OVERLAY1
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PW: !Ref VNS3
+    Properties:
+      IamInstanceProfile: !Ref ClientProfile
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx ]
+      InstanceType: !Ref ClientInstanceTypeParameter
+      KeyName: !Ref KeyPairName
+      SecurityGroups:
+      - !Ref ClientSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -e
+
+            yum update -y aws-cfn-bootstrap
+
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource Client1LaunchConfig --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Client1ASGroup --region ${AWS::Region}
+  Client1ASGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref ClientCount
+        Timeout: PT10M
+    DependsOn:
+      - VNS3
+    Properties:
+      LaunchConfigurationName: !Ref Client1LaunchConfig
+      Cooldown: !Ref ASGCOOLDOWN
+      MaxSize: !Ref ClientCount
+      MinSize: !Ref ClientCount
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1Id
+      Tags:
+      - PropagateAtLaunch: true
+        Key: Name
+        Value: !Sub ${AWS::StackName}-client1
+  Client2LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Authentication:
+        S3Credentials:
+          buckets:
+            - !Ref QSS3BucketName
+          roleName: !Ref ClientRole
+          type: S3
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              openvpn: []
+          services:
+            sysvinit:
+              cfn-hup:
+                  enabled: true
+                  ensureRunning: true
+                  files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+              openvpn:
+                enabled: 'true'
+                ensureRunning: 'true'
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.VirtualMachine.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=VirtualMachine
+                runas=root
+            /tmp/client-bootstrap.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+          commands:
+            b-bootstrap:
+              command: /tmp/client-bootstrap.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3OVERLAYIP: !Ref OVERLAY2
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PW: !Ref VNS3
+    Properties:
+      IamInstanceProfile: !Ref ClientProfile
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx ]
+      InstanceType: !Ref ClientInstanceTypeParameter
+      KeyName: !Ref KeyPairName
+      SecurityGroups:
+      - !Ref ClientSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -e
+
+            yum update -y aws-cfn-bootstrap
+
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource Client2LaunchConfig --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Client2ASGroup --region ${AWS::Region}
+  Client2ASGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref ClientCount
+        Timeout: PT10M
+    DependsOn:
+      - VNS3
+    Properties:
+      LaunchConfigurationName: !Ref Client2LaunchConfig
+      Cooldown: !Ref ASGCOOLDOWN
+      MaxSize: !Ref ClientCount
+      MinSize: !Ref ClientCount
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1Id
+      Tags:
+      - PropagateAtLaunch: true
+        Key: Name
+        Value: !Sub ${AWS::StackName}-client2
+  Client3LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Authentication:
+        S3Credentials:
+          buckets:
+            - !Ref QSS3BucketName
+          roleName: !Ref ClientRole
+          type: S3
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              openvpn: []
+          services:
+            sysvinit:
+              cfn-hup:
+                  enabled: true
+                  ensureRunning: true
+                  files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+              openvpn:
+                enabled: 'true'
+                ensureRunning: 'true'
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.VirtualMachine.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=VirtualMachine
+                runas=root
+            /tmp/client-bootstrap.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+          commands:
+            b-bootstrap:
+              command: /tmp/client-bootstrap.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3OVERLAYIP: !Ref OVERLAY3
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PW: !Ref VNS3
+    Properties:
+      IamInstanceProfile: !Ref ClientProfile
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx ]
+      InstanceType: !Ref ClientInstanceTypeParameter
+      KeyName: !Ref KeyPairName
+      SecurityGroups:
+      - !Ref ClientSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -e
+
+            yum update -y aws-cfn-bootstrap
+
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource Client3LaunchConfig --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Client3ASGroup --region ${AWS::Region}
+  Client3ASGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref ClientCount
+        Timeout: PT10M
+    DependsOn:
+      - VNS3
+    Properties:
+      LaunchConfigurationName: !Ref Client3LaunchConfig
+      Cooldown: !Ref ASGCOOLDOWN
+      MaxSize: !Ref ClientCount
+      MinSize: !Ref ClientCount
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1Id
+      Tags:
+      - PropagateAtLaunch: true
+        Key: Name
+        Value: !Sub ${AWS::StackName}-client3
+  Client4LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Authentication:
+        S3Credentials:
+          buckets:
+            - !Ref QSS3BucketName
+          roleName: !Ref ClientRole
+          type: S3
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              openvpn: []
+          services:
+            sysvinit:
+              cfn-hup:
+                  enabled: true
+                  ensureRunning: true
+                  files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+              openvpn:
+                enabled: 'true'
+                ensureRunning: 'true'
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.VirtualMachine.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=VirtualMachine
+                runas=root
+            /tmp/client-bootstrap.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+          commands:
+            b-bootstrap:
+              command: /tmp/client-bootstrap.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3OVERLAYIP: !Ref OVERLAY4
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PW: !Ref VNS3
+    Properties:
+      IamInstanceProfile: !Ref ClientProfile
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx ]
+      InstanceType: !Ref ClientInstanceTypeParameter
+      KeyName: !Ref KeyPairName
+      SecurityGroups:
+      - !Ref ClientSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -e
+
+            yum update -y aws-cfn-bootstrap
+
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource Client4LaunchConfig --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Client4ASGroup --region ${AWS::Region}
+  Client4ASGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref ClientCount
+        Timeout: PT10M
+    DependsOn:
+      - VNS3
+    Properties:
+      LaunchConfigurationName: !Ref Client4LaunchConfig
+      Cooldown: !Ref ASGCOOLDOWN
+      MaxSize: !Ref ClientCount
+      MinSize: !Ref ClientCount
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1Id
+      Tags:
+      - PropagateAtLaunch: true
+        Key: Name
+        Value: !Sub ${AWS::StackName}-client4
+  Client5LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Metadata:
+      AWS::CloudFormation::Authentication:
+        S3Credentials:
+          buckets:
+            - !Ref QSS3BucketName
+          roleName: !Ref ClientRole
+          type: S3
+      AWS::CloudFormation::Init:
+        config:
+          packages:
+            yum:
+              openvpn: []
+          services:
+            sysvinit:
+              cfn-hup:
+                  enabled: true
+                  ensureRunning: true
+                  files:
+                  - /etc/cfn/cfn-hup.conf
+                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+              openvpn:
+                enabled: 'true'
+                ensureRunning: 'true'
+          files:
+            /etc/cfn/cfn-hup.conf:
+              content: !Sub |
+                [main]
+                stack=${AWS::StackId}
+                region=${AWS::Region}
+                interval=1
+              mode: '000400'
+              owner: root
+              group: root
+            /etc/cfn/hooks.d/cfn-auto-reloader.conf:
+              content: !Sub |
+                [cfn-auto-reloader-hook]
+                triggers=post.update
+                path=Resources.VirtualMachine.Metadata.AWS::CloudFormation::Init
+                action=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=VirtualMachine
+                runas=root
+            /tmp/client-bootstrap.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+          commands:
+            b-bootstrap:
+              command: /tmp/client-bootstrap.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3OVERLAYIP: !Ref OVERLAY5
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PW: !Ref VNS3
+    Properties:
+      IamInstanceProfile: !Ref ClientProfile
+      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx ]
+      InstanceType: !Ref ClientInstanceTypeParameter
+      KeyName: !Ref KeyPairName
+      SecurityGroups:
+      - !Ref ClientSecurityGroup
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -e
+
+            yum update -y aws-cfn-bootstrap
+
+            /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource Client5LaunchConfig --region ${AWS::Region}
+            /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Client5ASGroup --region ${AWS::Region}
+  Client5ASGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    CreationPolicy:
+      ResourceSignal:
+        Count: !Ref ClientCount
+        Timeout: PT10M
+    DependsOn:
+      - VNS3
+    Properties:
+      LaunchConfigurationName: !Ref Client5LaunchConfig
+      Cooldown: !Ref ASGCOOLDOWN
+      MaxSize: !Ref ClientCount
+      MinSize: !Ref ClientCount
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1Id
+      Tags:
+      - PropagateAtLaunch: true
+        Key: Name
+        Value: !Sub ${AWS::StackName}-client5
+Outputs:
+  VNS3PublicIp:
+    Description: The Public IP of the VNS3 Network Controller
+    Value: !Ref ElasticIPVNS3
+  VNS3InstanceId:
+    Description: The Instance ID and default password of the VNS3 Network Controller
+    Value: !Ref VNS3
