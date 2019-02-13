@@ -9,10 +9,10 @@ Metadata:
       Parameters:
         - AvailabilityZones
         - VPCCIDR
-        - PrivateSubnet1CIDR
-        - PrivateSubnet2CIDR
         - PublicSubnet1CIDR
         - PublicSubnet2CIDR
+        - PrivateSubnet1CIDR
+        - PrivateSubnet2CIDR
         - RemoteAccessCidr
     - Label:
         default: Amazon EC2 Configuration
@@ -57,7 +57,7 @@ Parameters:
   AvailabilityZones:
     Description: List of Availability Zones to use for the subnets in the VPC. Three
       Availability Zones are used for this deployment, and the logical order of your
-      selections is preserved.
+      selections is preserved, please choose at least 2.
     Type: List<AWS::EC2::AvailabilityZone::Name>
   VPCCIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
@@ -86,15 +86,16 @@ Parameters:
   PublicSubnet2CIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.0.16/28
     Description: CIDR block for the public DMZ subnet 2 located in Availability Zone 2
     Type: String
+    Default: 10.0.0.16/28
   RemoteAccessCidr:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: The CIDR IP range that is permitted to access the instances. We recommend
       that you set this value to a trusted IP range.
     Type: String
+    Default: 0.0.0.0/0
   ClientInstanceTypeParameter:
     Description: Enter t3.nano, t3.micro or t3.small. Default is t3.nano.
     Type: String
@@ -120,7 +121,7 @@ Parameters:
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
       letters, uppercase letters, and hyphens (-). It cannot start or end with a hyphen
       (-).
-    Default: aws-quickstart
+    Default: cohesive-networks-aws-quickstart
     Description: S3 bucket name for the Quick Start assets. This string can include
       numbers, lowercase letters, uppercase letters, and hyphens (-). It cannot start
       or end with a hyphen (-).
@@ -129,7 +130,7 @@ Parameters:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and forward slash (/).
-    Default: quickstart-cohesive-vns3
+    Default: dev
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
@@ -176,6 +177,7 @@ Resources:
         - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
       Parameters:
         VpcId: !GetAtt VPCStack.Outputs.VPCID
+        VPCCIDR: !Ref VPCCIDR
         PrivateSubnet1Id: !GetAtt VPCStack.Outputs.PrivateSubnet1AID
         PrivateSubnet2Id: !GetAtt VPCStack.Outputs.PrivateSubnet2AID
         PublicSubnet1Id: !GetAtt VPCStack.Outputs.PublicSubnet1ID
@@ -184,9 +186,9 @@ Resources:
         BastionSecurityGroupID: !GetAtt BastionStack.Outputs.BastionSecurityGroupID
         ClientInstanceTypeParameter: !Ref ClientInstanceTypeParameter
         KeyPairName: !Ref KeyPairName
+        VNS3InstanceTypeParameter: !Ref VNS3InstanceTypeParameter
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        VNS3InstanceTypeParameter: !Ref VNS3InstanceTypeParameter
 Outputs:
   VNS3PublicIp:
     Description: The Public IP of the VNS3 Network Controller
