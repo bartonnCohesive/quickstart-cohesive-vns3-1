@@ -28,6 +28,7 @@ Metadata:
       Parameters:
         - QSS3BucketName
         - QSS3KeyPrefix
+        - AmazonLinuxAMI
     ParameterLabels:
       VpcId:
         default: VPC ID
@@ -53,6 +54,8 @@ Metadata:
         default: Quick Start S3 Bucket Name
       QSS3KeyPrefix:
         default: Quick Start S3 Key Prefix
+      AmazonLinuxAMI:
+        default: Amazon Linux SSM Parameter
 Parameters:
   VpcId:
     Description: ID of the VPC to deploy the VNS3 overlay network into
@@ -123,6 +126,10 @@ Parameters:
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
     Type: String
+  AmazonLinuxAMI:
+    Default: /aws/service/ami-amazon-linux-latest/amzn-ami-hvm-x86_64-gp2
+    Description: SSM Parameter for the latest Amazon Linux AMI
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
   ClientCount:
     Default: 1
     Description: Enter the number of overlay clients to launch.
@@ -156,52 +163,36 @@ Mappings:
   RegionMap: 
     ap-northeast-1: 
       VNS3: ami-08694490f0d884a29
-      AmzLnx: ami-00a5245b4816c38e6
     ap-northeast-2: 
       VNS3: ami-051991cb484814f84
-      AmzLnx: ami-00dc207f8ba6dc919
     ap-south-1: 
       VNS3: ami-00bbfe7a7b8cefbfc
-      AmzLnx: ami-0ad42f4f66f6c1cc9
     ap-southeast-1: 
       VNS3: ami-09284871b1cc5a4d3
-      AmzLnx: ami-05b3bcf7f311194b3
     ap-southeast-2: 
       VNS3: ami-04d119d7d801156a8
-      AmzLnx: ami-02fd0b06f06d93dfc
     ca-central-1: 
       VNS3: ami-0fc459114984dc7d2
-      AmzLnx: ami-07423fb63ea0a0930
     eu-central-1: 
       VNS3: ami-0f2d67aaf98b138e7
-      AmzLnx: ami-0cfbf4f6db41068ac
     eu-north-1:
       VNS3: ami-5bf87125
-      AmzLnx: ami-86fe70f8
     eu-west-1: 
       VNS3: ami-076e83bf71054765c
-      AmzLnx: ami-08935252a36e25f85
     eu-west-2:
       VNS3: ami-0988821d559fb6f89
-      AmzLnx: ami-01419b804382064e4
     eu-west-3:
       VNS3: ami-05614ada9053bf8f9
-      AmzLnx: ami-0dd7e7ed60da8fb83
     sa-east-1:
       VNS3: ami-098aa3368855c893b
-      AmzLnx: ami-05145e0b28ad8e0b2
     us-east-1:
       VNS3: ami-0c367aa0344dd6e72
-      AmzLnx: ami-0080e4c5bc078760e
     us-east-2:
       VNS3: ami-0c4fa462270811c7c
-      AmzLnx: ami-0cd3dfa4e37921605
     us-west-1:
       VNS3: ami-091eafd04ef724b53
-      AmzLnx: ami-0ec6517f6edbf8044
     us-west-2:
       VNS3: ami-0786d5a9d9daf3a3f
-      AmzLnx: ami-01e24be29428c15b2
 Resources:
   ElasticIPVNS3:
     Type: AWS::EC2::EIP
@@ -356,7 +347,12 @@ Resources:
               group: root
               mode: '000755'
               owner: root
-              source: !Sub https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              source: !Sub
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap.sh
@@ -368,7 +364,7 @@ Resources:
                 VNS3PW: !Ref VNS3
     Properties:
       IamInstanceProfile: !Ref ClientProfile
-      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx ]
+      ImageId: !Ref AmazonLinuxAMI
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
@@ -448,7 +444,12 @@ Resources:
               group: root
               mode: '000755'
               owner: root
-              source: !Sub https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              source: !Sub
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap.sh
@@ -460,7 +461,7 @@ Resources:
                 VNS3PW: !Ref VNS3
     Properties:
       IamInstanceProfile: !Ref ClientProfile
-      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx ]
+      ImageId: !Ref AmazonLinuxAMI
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
@@ -540,7 +541,12 @@ Resources:
               group: root
               mode: '000755'
               owner: root
-              source: !Sub https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              source: !Sub
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap.sh
@@ -552,7 +558,7 @@ Resources:
                 VNS3PW: !Ref VNS3
     Properties:
       IamInstanceProfile: !Ref ClientProfile
-      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx ]
+      ImageId: !Ref AmazonLinuxAMI
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
@@ -632,7 +638,12 @@ Resources:
               group: root
               mode: '000755'
               owner: root
-              source: !Sub https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              source: !Sub
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap.sh
@@ -644,7 +655,7 @@ Resources:
                 VNS3PW: !Ref VNS3
     Properties:
       IamInstanceProfile: !Ref ClientProfile
-      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx ]
+      ImageId: !Ref AmazonLinuxAMI
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
@@ -724,7 +735,12 @@ Resources:
               group: root
               mode: '000755'
               owner: root
-              source: !Sub https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              source: !Sub
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap.sh
@@ -736,7 +752,7 @@ Resources:
                 VNS3PW: !Ref VNS3
     Properties:
       IamInstanceProfile: !Ref ClientProfile
-      ImageId: !FindInMap [ RegionMap, !Ref 'AWS::Region', AmzLnx ]
+      ImageId: !Ref AmazonLinuxAMI
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
