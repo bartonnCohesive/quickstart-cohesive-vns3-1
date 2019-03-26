@@ -233,7 +233,7 @@ Resources:
       - CidrIp: !Ref RemoteAccessCidr
         FromPort: 22
         IpProtocol: tcp
-        ToPort: 22
+        ToPort: 66
       - CidrIp: !Ref RemoteAccessCidr
         FromPort: 8000
         IpProtocol: tcp
