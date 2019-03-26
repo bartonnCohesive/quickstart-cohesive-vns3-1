@@ -1,24 +1,3 @@
-Skip to content
- 
-Search or jump to…
-
-Pull requests
-Issues
-Marketplace
-Explore
- 
-@bartonnCohesive Sign out
-You could lose access to your GitHub account
-You enabled two-factor authentication, but you haven’t viewed your recovery codes. If you lose your two-factor device, GitHub support will not be able to recover your account for you. Go to the two-factor authentication settings page to view and print your recovery codes.
-4
-0 1 aws-quickstart/quickstart-cohesive-vns3 Private
- Code  Issues 0  Pull requests 0  Projects 0  Insights
-quickstart-cohesive-vns3/templates/cohesive-vns3.template
-@bmoller bmoller Fixed GovCloud, use SSM for AMZN AMI's
-f325bf0 25 days ago
-@bmoller @bartonnCohesive
-795 lines (784 sloc)  25.6 KB
-    
 ---
 AWSTemplateFormatVersion: 2010-09-09
 Description: CloudFormation script to create one VNS3 free edition network controller with five Amazon Linux 2 overlay clients
