@@ -87,12 +87,4 @@ sed 's/^remote '$VNS3IP' 1194/remote '$VNS3PDNS' 1194/g' /tmp/$PACK.conf > /etc/
 
 rm -f /tmp/$PACK.conf
 
-if [ $PACK = 100_127_255_193 ]; then 
-	 curl -k -X POST -u api:$VNS3PW -d '{"rule":"MACRO_CUST -o eth0 -s 100.127.255.193/29 -j MASQUERADE"}' -H 'Content-Type: application/json' https://$VNS3IP:8000/api/firewall/rules;
-	 curl -k -X POST -u api:$VNS3PW -d '{"rule":"PREROUTING_CUST -i eth0 -p tcp -s 0.0.0.0/0 --dport 22 -j DNAT --to 100.127.255.193:22"}' -H 'Content-Type: application/json' https://$VNS3IP:8000/api/firewall/rules
-	 curl -k -X POST -u api:$VNS3PW -d '{"rule":"FORWARD_CUST -j ACCEPT"}' -H 'Content-Type: application/json' https://$VNS3IP:8000/api/firewall/rules
-fi
-
-#service routing-agent start
-
 exit 0
