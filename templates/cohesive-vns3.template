@@ -121,7 +121,7 @@ Parameters:
     AllowedPattern: ^[0-9a-zA-Z-/]*$
     ConstraintDescription: Quick Start key prefix can include numbers, lowercase letters,
       uppercase letters, hyphens (-), and forward slash (/).
-    Default: quickstart-cohesive-vns3
+    Default: quickstart-cohesive-vns3/
     Description: S3 key prefix for the Quick Start assets. Quick Start key prefix
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
@@ -293,7 +293,7 @@ Resources:
           Version: 2012-10-17
           Statement:
           - Effect: Allow
-            Resource: !Sub arn:aws:s3:::${QSS3BucketName}/${QSS3KeyPrefix}/*
+            Resource: !Sub arn:aws:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*
             Action: s3:GetObject
   ClientProfile:
     Type: AWS::IAM::InstanceProfile
@@ -352,7 +352,7 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/mcast.py
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -363,7 +363,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-a.sh
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -385,7 +385,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-b.sh
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -396,7 +396,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -493,7 +493,7 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/mcast.py
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -504,7 +504,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-a.sh
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -526,7 +526,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-b.sh
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -537,7 +537,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -634,7 +634,7 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/mcast.py
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -645,7 +645,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-a.sh
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -667,7 +667,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-b.sh
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -678,7 +678,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -775,7 +775,7 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/mcast.py
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -786,7 +786,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-a.sh
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -808,7 +808,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-b.sh
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -819,7 +819,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -916,7 +916,7 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/mcast.py
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -927,7 +927,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-a.sh
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -949,7 +949,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-b.sh
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -960,7 +960,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub 
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
