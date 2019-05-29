@@ -233,7 +233,7 @@ Resources:
       - CidrIp: !Ref RemoteAccessCidr
         FromPort: 22
         IpProtocol: tcp
-        ToPort: 22
+        ToPort: 66
       - CidrIp: !Ref RemoteAccessCidr
         FromPort: 8000
         IpProtocol: tcp
@@ -310,7 +310,11 @@ Resources:
           roleName: !Ref ClientRole
           type: S3
       AWS::CloudFormation::Init:
-        config:
+        configSets: 
+          ascending: 
+            - "config1"
+            - "config2"
+        config1:
           packages:
             yum:
               openvpn: []
@@ -342,26 +346,66 @@ Resources:
                 path=Resources.VirtualMachine.Metadata.AWS::CloudFormation::Init
                 action=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=VirtualMachine
                 runas=root
-            /tmp/client-bootstrap.sh:
+            /home/ec2-user/mcast.py:
+              authentication: S3AccessCreds
+              group: ec2-user
+              mode: '000755'
+              owner: ec2-user
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/mcast.py
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+            /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
-              source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-a.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
           commands:
-            b-bootstrap:
-              command: /tmp/client-bootstrap.sh
+            a-bootstrap:
+              command: /tmp/client-bootstrap-a.sh
               env:
-                VPC_CIDR: !Ref VPCCIDR 
+                VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY1
                 VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
+        config2:
+          files:
+            /tmp/client-bootstrap-b.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-b.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+            /tmp/cohesive-ra-1.1.1_x86_64.rpm:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+          commands:
+            b-bootstrap: 
+              command: /tmp/client-bootstrap-b.sh
+              env:
+                VNS3OVERLAYIP: !Ref OVERLAY1
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
@@ -407,7 +451,11 @@ Resources:
           roleName: !Ref ClientRole
           type: S3
       AWS::CloudFormation::Init:
-        config:
+        configSets: 
+          ascending: 
+            - "config1"
+            - "config2"
+        config1:
           packages:
             yum:
               openvpn: []
@@ -439,26 +487,66 @@ Resources:
                 path=Resources.VirtualMachine.Metadata.AWS::CloudFormation::Init
                 action=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=VirtualMachine
                 runas=root
-            /tmp/client-bootstrap.sh:
+            /home/ec2-user/mcast.py:
+              authentication: S3AccessCreds
+              group: ec2-user
+              mode: '000755'
+              owner: ec2-user
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/mcast.py
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+            /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
-              source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-a.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
           commands:
-            b-bootstrap:
-              command: /tmp/client-bootstrap.sh
+            a-bootstrap:
+              command: /tmp/client-bootstrap-a.sh
               env:
                 VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY2
                 VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
+        config2:
+          files:
+            /tmp/client-bootstrap-b.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-b.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+            /tmp/cohesive-ra-1.1.1_x86_64.rpm:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+          commands:
+            b-bootstrap: 
+              command: /tmp/client-bootstrap-b.sh
+              env:
+                VNS3OVERLAYIP: !Ref OVERLAY2
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
@@ -504,7 +592,11 @@ Resources:
           roleName: !Ref ClientRole
           type: S3
       AWS::CloudFormation::Init:
-        config:
+        configSets: 
+          ascending: 
+            - "config1"
+            - "config2"
+        config1:
           packages:
             yum:
               openvpn: []
@@ -536,26 +628,66 @@ Resources:
                 path=Resources.VirtualMachine.Metadata.AWS::CloudFormation::Init
                 action=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=VirtualMachine
                 runas=root
-            /tmp/client-bootstrap.sh:
+            /home/ec2-user/mcast.py:
+              authentication: S3AccessCreds
+              group: ec2-user
+              mode: '000755'
+              owner: ec2-user
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/mcast.py
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+            /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
-              source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-a.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
           commands:
-            b-bootstrap:
-              command: /tmp/client-bootstrap.sh
+            a-bootstrap:
+              command: /tmp/client-bootstrap-a.sh
               env:
                 VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY3
                 VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
+        config2:
+          files:
+            /tmp/client-bootstrap-b.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-b.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+            /tmp/cohesive-ra-1.1.1_x86_64.rpm:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+          commands:
+            b-bootstrap: 
+              command: /tmp/client-bootstrap-b.sh
+              env:
+                VNS3OVERLAYIP: !Ref OVERLAY3
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
@@ -601,7 +733,11 @@ Resources:
           roleName: !Ref ClientRole
           type: S3
       AWS::CloudFormation::Init:
-        config:
+        configSets: 
+          ascending: 
+            - "config1"
+            - "config2"
+        config1:
           packages:
             yum:
               openvpn: []
@@ -633,26 +769,66 @@ Resources:
                 path=Resources.VirtualMachine.Metadata.AWS::CloudFormation::Init
                 action=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=VirtualMachine
                 runas=root
-            /tmp/client-bootstrap.sh:
+            /home/ec2-user/mcast.py:
+              authentication: S3AccessCreds
+              group: ec2-user
+              mode: '000755'
+              owner: ec2-user
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/mcast.py
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+            /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
-              source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-a.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
           commands:
-            b-bootstrap:
-              command: /tmp/client-bootstrap.sh
+            a-bootstrap:
+              command: /tmp/client-bootstrap-a.sh
               env:
                 VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY4
                 VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
+        config2:
+          files:
+            /tmp/client-bootstrap-b.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-b.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+            /tmp/cohesive-ra-1.1.1_x86_64.rpm:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+          commands:
+            b-bootstrap: 
+              command: /tmp/client-bootstrap-b.sh
+              env:
+                VNS3OVERLAYIP: !Ref OVERLAY4
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
@@ -698,7 +874,11 @@ Resources:
           roleName: !Ref ClientRole
           type: S3
       AWS::CloudFormation::Init:
-        config:
+        configSets: 
+          ascending: 
+            - "config1"
+            - "config2"
+        config1:
           packages:
             yum:
               openvpn: []
@@ -730,26 +910,66 @@ Resources:
                 path=Resources.VirtualMachine.Metadata.AWS::CloudFormation::Init
                 action=/opt/aws/bin/cfn-init --verbose --stack=${AWS::StackName} --region=${AWS::Region} --resource=VirtualMachine
                 runas=root
-            /tmp/client-bootstrap.sh:
+            /home/ec2-user/mcast.py:
+              authentication: S3AccessCreds
+              group: ec2-user
+              mode: '000755'
+              owner: ec2-user
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/mcast.py
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+            /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
-              source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap.sh
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-a.sh
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
           commands:
-            b-bootstrap:
-              command: /tmp/client-bootstrap.sh
+            a-bootstrap:
+              command: /tmp/client-bootstrap-a.sh
               env:
                 VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY5
                 VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
+        config2:
+          files:
+            /tmp/client-bootstrap-b.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/client-bootstrap-b.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+            /tmp/cohesive-ra-1.1.1_x86_64.rpm:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub 
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
+          commands:
+            b-bootstrap: 
+              command: /tmp/client-bootstrap-b.sh
+              env:
+                VNS3OVERLAYIP: !Ref OVERLAY5
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI

@@ -9,10 +9,10 @@ Metadata:
       Parameters:
         - AvailabilityZones
         - VPCCIDR
-        - PublicSubnet1CIDR
-        - PublicSubnet2CIDR
         - PrivateSubnet1CIDR
         - PrivateSubnet2CIDR
+        - PublicSubnet1CIDR
+        - PublicSubnet2CIDR
         - RemoteAccessCidr
     - Label:
         default: Amazon EC2 Configuration
@@ -68,19 +68,19 @@ Parameters:
   PrivateSubnet1CIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.0.32/28
+    Default: 10.0.0.0/26
     Description: CIDR block for private subnet 1 located in Availability Zone 1
     Type: String
   PrivateSubnet2CIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.0.48/28
+    Default: 10.0.0.64/26
     Description: CIDR block for private subnet 2 located in Availability Zone 2
     Type: String
   PublicSubnet1CIDR:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
-    Default: 10.0.0.0/28
+    Default: 10.0.0.224/28
     Description: CIDR block for the public DMZ subnet 1 located in Availability Zone 1
     Type: String
   PublicSubnet2CIDR:
@@ -88,14 +88,14 @@ Parameters:
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/16-28
     Description: CIDR block for the public DMZ subnet 2 located in Availability Zone 2
     Type: String
-    Default: 10.0.0.16/28
+    Default: 10.0.0.240/28
   RemoteAccessCidr:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
     ConstraintDescription: CIDR block parameter must be in the form x.x.x.x/x
     Description: The CIDR IP range that is permitted to access the instances. We recommend
       that you set this value to a trusted IP range.
     Type: String
-    Default: 0.0.0.0/0
+    Default: 100.17.100.141/32
   ClientInstanceTypeParameter:
     Description: Enter t3.nano, t3.micro or t3.small. Default is t3.nano.
     Type: String
@@ -159,7 +159,7 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub
-        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/submodules/quickstart-linux-bastion/templates/linux-bastion.template
+        - hhttps://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/submodules/quickstart-linux-bastion/templates/linux-bastion.template
         - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
       Parameters:
         EnableTCPForwarding: 'true'
@@ -191,8 +191,16 @@ Resources:
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
 Outputs:
   VNS3PublicIp:
-    Description: The Public IP of the VNS3 Network Controller
-    Value: !GetAtt VNS3Stack.Outputs.VNS3PublicIp
+    Description: The URL to connect to the VNS3 Network Controller
+    Value: 
+      !Join
+        - ''
+        - - 'https://'
+          - !GetAtt VNS3Stack.Outputs.VNS3PublicIp
+          - ':8000'
+  VNS3AdminUserName:
+    Description: The admin user name to log into the VNS3 Controller
+    Value: 'vnscubed'
   VNS3InstanceId:
     Description: The Instance ID and default password of the VNS3 Network Controller
     Value: !GetAtt VNS3Stack.Outputs.VNS3InstanceId
