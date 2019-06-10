@@ -5,7 +5,7 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label:
-        default: Network Configuration
+        default: VPC Network Configuration
       Parameters:
         - AvailabilityZones
         - VPCCIDR
@@ -30,7 +30,7 @@ Metadata:
         - QSS3KeyPrefix
     ParameterLabels:
       AvailabilityZones:
-        default: AvailabilityZones
+        default: Availability Zones
       VPCCIDR:
         default: VPC CIDR
       PrivateSubnet1CIDR:
@@ -44,15 +44,15 @@ Metadata:
       RemoteAccessCidr:
         default: Allowed External Access CIDR
       ClientInstanceTypeParameter:
-        default: Overlay Clients Instance Type
+        default: Overlay clients instance type
       KeyPairName:
-        default: SSH Key Name
-      VNS3InstanceTypeParameter:
+        default: Key pair name
+      VNS3InstanceT ypeParameter:
         default: VNS3 Instance Type
-      QSS3BucketName:
-        default: Quick Start S3 Bucket Name
-      QSS3KeyPrefix:
-        default: Quick Start S3 Key Prefix
+      QSS3BucketNam e:
+        default: Quick Start S3 bucket name
+      QSS3KeyPrefix: 
+        default: Quick Start S3 key prefix
 Parameters: 
   AvailabilityZones:
     Description: List of Availability Zones to use for the subnets in the VPC. Three
@@ -176,7 +176,7 @@ Resources:
         - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}/templates/cohesive-vns3.template
         - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
       Parameters:
-        VpcId: !GetAtt VPCStack.Outputs.VPCID
+        VPCID: !GetAtt VPCStack.Outputs.VPCID
         VPCCIDR: !Ref VPCCIDR
         PrivateSubnet1Id: !GetAtt VPCStack.Outputs.PrivateSubnet1AID
         PrivateSubnet2Id: !GetAtt VPCStack.Outputs.PrivateSubnet2AID

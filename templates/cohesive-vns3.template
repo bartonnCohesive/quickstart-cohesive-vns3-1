@@ -7,7 +7,7 @@ Metadata:
     - Label:
         default: Network Configuration
       Parameters:
-        - VpcId
+        - VPCID
         - PrivateSubnet1Id
         - PrivateSubnet2Id
         - PublicSubnet1Id
@@ -30,7 +30,7 @@ Metadata:
         - QSS3KeyPrefix
         - AmazonLinuxAMI
     ParameterLabels:
-      VpcId:
+      VPCID:
         default: VPC ID
       PrivateSubnet1Id:
         default: Private Subnet 1 ID
@@ -57,7 +57,7 @@ Metadata:
       AmazonLinuxAMI:
         default: Amazon Linux SSM Parameter
 Parameters:
-  VpcId:
+  VPCID:
     Description: ID of the VPC to deploy the VNS3 overlay network into
     Type: AWS::EC2::VPC::Id
   VPCCIDR:
@@ -136,9 +136,9 @@ Parameters:
     MaxValue: 1
     MinValue: 1
     Type: Number
-  OVERLAY1:
-    Default: '100_127_255_193'
-    Type: String
+      OVERLAY1:
+        Default: '100_127_255_193'
+        Type: String
   OVERLAY2:
     Default: '100_127_255_194'
     Type: String
@@ -159,25 +159,25 @@ Conditions:
     !Or
       - !Equals [!Ref 'AWS::Region', us-gov-east-1]
       - !Equals [!Ref 'AWS::Region', us-gov-west-1]
-Mappings: 
-  RegionMap: 
-    ap-northeast-1: 
+Mappings:
+  RegionMap:
+    ap-northeast-1:
       VNS3: ami-08694490f0d884a29
-    ap-northeast-2: 
+    ap-northeast-2:
       VNS3: ami-051991cb484814f84
-    ap-south-1: 
+    ap-south-1:
       VNS3: ami-00bbfe7a7b8cefbfc
-    ap-southeast-1: 
+    ap-southeast-1:
       VNS3: ami-09284871b1cc5a4d3
-    ap-southeast-2: 
+    ap-southeast-2:
       VNS3: ami-04d119d7d801156a8
-    ca-central-1: 
+    ca-central-1:
       VNS3: ami-0fc459114984dc7d2
-    eu-central-1: 
+    eu-central-1:
       VNS3: ami-0f2d67aaf98b138e7
     eu-north-1:
       VNS3: ami-5bf87125
-    eu-west-1: 
+    eu-west-1:
       VNS3: ami-076e83bf71054765c
     eu-west-2:
       VNS3: ami-0988821d559fb6f89
@@ -213,7 +213,7 @@ Resources:
       Tags:
       - Key: Name
         Value: !Sub ${AWS::StackName}-host
-      VpcId: !Ref VpcId
+      VPCID: !Ref VPCID
   VNS3SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -241,7 +241,7 @@ Resources:
       Tags:
       - Key: Name
         Value: !Sub ${AWS::StackName}-VNS3
-      VpcId: !Ref VpcId
+      VPCID: !Ref VPCID
   VNS3RecoveryTestAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -253,7 +253,7 @@ Resources:
       EvaluationPeriods: 2
       ComparisonOperator: GreaterThanThreshold
       Threshold: 0
-      AlarmActions: 
+      AlarmActions:
         - !Sub 'arn:aws:automate:${AWS::Region}:ec2:recover'
       Dimensions:
       - Name: InstanceId
