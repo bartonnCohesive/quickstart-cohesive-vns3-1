@@ -136,9 +136,9 @@ Parameters:
     MaxValue: 1
     MinValue: 1
     Type: Number
-      OVERLAY1:
-        Default: '100_127_255_193'
-        Type: String
+  OVERLAY1:
+    Default: '100_127_255_193'
+    Type: String
   OVERLAY2:
     Default: '100_127_255_194'
     Type: String
