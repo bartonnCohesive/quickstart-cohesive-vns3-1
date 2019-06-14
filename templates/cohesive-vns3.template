@@ -155,12 +155,12 @@ Parameters:
   OVERLAY2:
     Default: '100.127.255.194'
     Description: "2nd VNS3 Overlay IP"
-    Type: String 
-  OVERLAY3: 
+    Type: String
+  OVERLAY3:
     Default: '100.127.255.195'
     Description: "3rd VNS3 Overlay IP"
     Type: String
-  OVERLAY4: 
+  OVERLAY4:
     Default: '100.127.255.196'
     Description: "4th VNS3 Overlay IP"
     Type: String
@@ -311,8 +311,12 @@ Resources:
           Version: 2012-10-17
           Statement:
           - Effect: Allow
-            Resource: !Sub arn:aws:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*
-            Action: s3:GetObject
+            Resource:
+              - !Sub "arn:aws:s3:::${QSS3BucketName}/${QSS3KeyPrefix}*"
+              - !Sub "arn:aws:s3:::${QSS3BucketName}/"
+            Action:
+              - s3:GetObject
+              - s3:ListBucket
   ClientProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -344,9 +348,6 @@ Resources:
                   files:
                   - /etc/cfn/cfn-hup.conf
                   - /etc/cfn/hooks.d/cfn-auto-reloader.conf
-              openvpn:
-                enabled: 'true'
-                ensureRunning: 'true'
           files:
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -386,17 +387,6 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
-          commands:
-            a-bootstrap:
-              command: /tmp/client-bootstrap-a.sh
-              env:
-                VPC_CIDR: !Ref VPCCIDR
-                VNS3OVERLAYIP: !Ref OVERLAY1
-                VNS3PDNS: !GetAtt VNS3.PublicDnsName
-                VNS3IP: !GetAtt VNS3.PrivateIp
-                VNS3PW: !Ref VNS3
-        config2:
-          files:
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
@@ -419,6 +409,20 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
+          commands:
+            a-bootstrap:
+              command: /tmp/client-bootstrap-a.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3OVERLAYIP: !Ref OVERLAY1
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PW: !Ref VNS3
+        config2:
+          services:
+            openvpn:
+              enabled: 'true'
+              ensureRunning: 'true'
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap-b.sh
@@ -485,9 +489,6 @@ Resources:
                   files:
                   - /etc/cfn/cfn-hup.conf
                   - /etc/cfn/hooks.d/cfn-auto-reloader.conf
-              openvpn:
-                enabled: 'true'
-                ensureRunning: 'true'
           files:
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -527,17 +528,6 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
-          commands:
-            a-bootstrap:
-              command: /tmp/client-bootstrap-a.sh
-              env:
-                VPC_CIDR: !Ref VPCCIDR
-                VNS3OVERLAYIP: !Ref OVERLAY2
-                VNS3PDNS: !GetAtt VNS3.PublicDnsName
-                VNS3IP: !GetAtt VNS3.PrivateIp
-                VNS3PW: !Ref VNS3
-        config2:
-          files:
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
@@ -560,6 +550,20 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
+          commands:
+            a-bootstrap:
+              command: /tmp/client-bootstrap-a.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3OVERLAYIP: !Ref OVERLAY2
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PW: !Ref VNS3
+        config2:
+          services:
+            openvpn:
+              enabled: 'true'
+              ensureRunning: 'true'
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap-b.sh
@@ -626,9 +630,6 @@ Resources:
                   files:
                   - /etc/cfn/cfn-hup.conf
                   - /etc/cfn/hooks.d/cfn-auto-reloader.conf
-              openvpn:
-                enabled: 'true'
-                ensureRunning: 'true'
           files:
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -668,17 +669,6 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
-          commands:
-            a-bootstrap:
-              command: /tmp/client-bootstrap-a.sh
-              env:
-                VPC_CIDR: !Ref VPCCIDR
-                VNS3OVERLAYIP: !Ref OVERLAY3
-                VNS3PDNS: !GetAtt VNS3.PublicDnsName
-                VNS3IP: !GetAtt VNS3.PrivateIp
-                VNS3PW: !Ref VNS3
-        config2:
-          files:
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
@@ -701,6 +691,20 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
+          commands:
+            a-bootstrap:
+              command: /tmp/client-bootstrap-a.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3OVERLAYIP: !Ref OVERLAY3
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PW: !Ref VNS3
+        config2:
+          services:
+            openvpn:
+              enabled: 'true'
+              ensureRunning: 'true'
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap-b.sh
@@ -767,9 +771,6 @@ Resources:
                   files:
                   - /etc/cfn/cfn-hup.conf
                   - /etc/cfn/hooks.d/cfn-auto-reloader.conf
-              openvpn:
-                enabled: 'true'
-                ensureRunning: 'true'
           files:
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -809,17 +810,6 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
-          commands:
-            a-bootstrap:
-              command: /tmp/client-bootstrap-a.sh
-              env:
-                VPC_CIDR: !Ref VPCCIDR
-                VNS3OVERLAYIP: !Ref OVERLAY4
-                VNS3PDNS: !GetAtt VNS3.PublicDnsName
-                VNS3IP: !GetAtt VNS3.PrivateIp
-                VNS3PW: !Ref VNS3
-        config2:
-          files:
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
@@ -842,6 +832,20 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
+          commands:
+            a-bootstrap:
+              command: /tmp/client-bootstrap-a.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3OVERLAYIP: !Ref OVERLAY4
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PW: !Ref VNS3
+        config2:
+          services:
+            openvpn:
+              enabled: 'true'
+              ensureRunning: 'true'
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap-b.sh
@@ -908,9 +912,6 @@ Resources:
                   files:
                   - /etc/cfn/cfn-hup.conf
                   - /etc/cfn/hooks.d/cfn-auto-reloader.conf
-              openvpn:
-                enabled: 'true'
-                ensureRunning: 'true'
           files:
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -950,17 +951,6 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
-          commands:
-            a-bootstrap:
-              command: /tmp/client-bootstrap-a.sh
-              env:
-                VPC_CIDR: !Ref VPCCIDR
-                VNS3OVERLAYIP: !Ref OVERLAY5
-                VNS3PDNS: !GetAtt VNS3.PublicDnsName
-                VNS3IP: !GetAtt VNS3.PrivateIp
-                VNS3PW: !Ref VNS3
-        config2:
-          files:
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
@@ -983,6 +973,20 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
+          commands:
+            a-bootstrap:
+              command: /tmp/client-bootstrap-a.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3OVERLAYIP: !Ref OVERLAY5
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PW: !Ref VNS3
+        config2:
+          services:
+            openvpn:
+              enabled: 'true'
+              ensureRunning: 'true'
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap-b.sh

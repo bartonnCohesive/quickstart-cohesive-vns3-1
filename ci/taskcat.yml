@@ -25,5 +25,3 @@ tests:
   quickstart-cohesive-vns3-defaults:
     parameter_input: cohesive-vns3-defaults.json
     template_file: cohesive-vns3-master.template
-    regions:
-      - us-west-2

@@ -14,7 +14,7 @@ wait_for_api () {
 
 wait_for_api
 
-PACK=$VNS3OVERLAYIP
+PACK=$(echo $VNS3OVERLAYIP | sed 's/\./_/g')
 NETWORK=$(echo $VPC_CIDR | sed 's/\/.*//')
 MASK=$(echo $VPC_CIDR | sed 's/.*\///')
 
