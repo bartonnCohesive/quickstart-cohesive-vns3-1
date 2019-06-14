@@ -5,7 +5,7 @@ Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label:
-        default: VPC Network configuration
+        default: VPC network configuration
       Parameters:
         - AvailabilityZones
         - VPCCIDR
@@ -19,12 +19,12 @@ Metadata:
       Parameters:
         - ClientInstanceTypeParameter
         - KeyPairName
+        - ASGCOOLDOWN
         - AmazonLinuxAMI
     - Label:
         default: Cohesive Networks VNS3 configuration
       Parameters:
         - VNS3InstanceTypeParameter
-        - ClientInstanceTypeParameter
         - ClientCount
         - OVERLAY1
         - OVERLAY2
@@ -32,7 +32,7 @@ Metadata:
         - OVERLAY4
         - OVERLAY5
     - Label:
-        default: AWS Quick Start Configuration
+        default: AWS Quick Start configuration
       Parameters:
         - QSS3BucketName
         - QSS3KeyPrefix
@@ -50,7 +50,7 @@ Metadata:
       PublicSubnet2CIDR:
         default: Public subnet 2 CIDR
       RemoteAccessCidr:
-        default: Allowed external eccess CIDR
+        default: Allowed external access CIDR
       ClientInstanceTypeParameter:
         default: Overlay clients instance type
       KeyPairName:
@@ -176,12 +176,12 @@ Parameters:
   OVERLAY2:
     Default: '100.127.255.194'
     Description: "2nd VNS3 Overlay IP."
-    Type: String 
-  OVERLAY3: 
+    Type: String
+  OVERLAY3:
     Default: '100.127.255.195'
     Description: "3rd VNS3 Overlay IP."
     Type: String
-  OVERLAY4: 
+  OVERLAY4:
     Default: '100.127.255.196'
     Description: "4th VNS3 Overlay IP."
     Type: String

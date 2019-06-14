@@ -11,17 +11,17 @@ global:
     - ap-southeast-2
     - ca-central-1
     - eu-central-1
-    - eu-north-1
+#    - eu-north-1
     - eu-west-1
     - eu-west-2
     - eu-west-3
-    - sa-east-1
+#    - sa-east-1
     - us-east-1
     - us-east-2
     - us-west-1
     - us-west-2
   reporting: true
 tests:
-  quickstart-cohesive-vns3-defaults:
+   quickstart-cohesive-vns3-defaults:
     parameter_input: cohesive-vns3-defaults.json
     template_file: cohesive-vns3-master.template

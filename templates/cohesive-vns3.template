@@ -16,6 +16,7 @@ Metadata:
     - Label:
         default: Amazon EC2 configuration
       Parameters:
+        - ClientInstanceTypeParameter
         - KeyPairName
         - ASGCooldown
         - AmazonLinuxAMI
@@ -23,7 +24,6 @@ Metadata:
         default: Cohesive Networks VNS3 configuration
       Parameters:
         - VNS3InstanceTypeParameter
-        - ClientInstanceTypeParameter
         - ClientCount
         - OVERLAY1
         - OVERLAY2
