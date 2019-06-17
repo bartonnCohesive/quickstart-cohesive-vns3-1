@@ -1,7 +1,14 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
-Description: CloudFormation script to create one VNS3 free edition network controller with five Amazon Linux 2 overlay clients
+Description: CloudFormation script to create one VNS3 free edition network controller with five Amazon Linux AMI overlay clients
 Metadata:
+  AWSAMIRegionMap:
+    Filters:
+      VNS3:
+        name: vnscubed*
+        owner-alias: aws-marketplace
+        product-code: dnenbuz38vmuzp0f9fnbhjkn7
+        product-code.type: marketplace
   AWS::CloudFormation::Interface:
     ParameterGroups:
     - Label:
@@ -87,8 +94,11 @@ Parameters:
   PrivateSubnet1Id:
     Description: ID of private subnet 1 for the overlay clients.
     Type: AWS::EC2::Subnet::Id
+  PrivateSubnet2Id:
+    Description: ID of private subnet 1 for the overlay clients.
+    Type: AWS::EC2::Subnet::Id
   PublicSubnet1Id:
-    Description: ID of private subnet 1 for the VNS3 controllers.
+    Description: ID of private subnet 1 for the VNS3 controller.
     Type: AWS::EC2::Subnet::Id
   RemoteAccessCidr:
     AllowedPattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/([0-9]|[1-2][0-9]|3[0-2]))$
@@ -102,11 +112,13 @@ Parameters:
   ClientInstanceTypeParameter:
     Description: Enter t3.nano, t3.micro or t3.small. Default is t3.nano.
     Type: String
-    Default: 't3.nano'
+    Default: t3.small
     AllowedValues:
       - t3.nano
       - t3.micro
       - t3.small
+      - c5.large
+      - c5.nlarge
   KeyPairName:
     Description: The name of an existing public/private key pair, which allows you
       to securely connect to your instance after it launches.
@@ -114,11 +126,13 @@ Parameters:
   VNS3InstanceTypeParameter:
     Description: 'Enter t3.nano, t3.micro or t3.small. Default is t3.micro.'
     Type: String
-    Default: 't3.micro'
+    Default: 't3.small'
     AllowedValues:
       - t3.nano
       - t3.micro
       - t3.small
+      - c5.large
+      - c5.nlarge
   QSS3BucketName:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
@@ -178,39 +192,39 @@ Conditions:
       - !Equals [!Ref 'AWS::Region', us-gov-east-1]
       - !Equals [!Ref 'AWS::Region', us-gov-west-1]
 Mappings:
-  RegionMap:
+  AWSAMIRegionMap:
     ap-northeast-1:
-      VNS3: ami-08694490f0d884a29
+      VNS3: ami-0e9e8b8847e24c4e3
     ap-northeast-2:
-      VNS3: ami-051991cb484814f84
+      VNS3: ami-08f715611802a5da6
     ap-south-1:
-      VNS3: ami-00bbfe7a7b8cefbfc
+      VNS3: ami-04140ad6d376240ac
     ap-southeast-1:
-      VNS3: ami-09284871b1cc5a4d3
+      VNS3: ami-07655aee322a5d7ab
     ap-southeast-2:
-      VNS3: ami-04d119d7d801156a8
+      VNS3: ami-0588f36f2bd84cb56
     ca-central-1:
-      VNS3: ami-0fc459114984dc7d2
+      VNS3: ami-0bf16449b0c4e8b6e
     eu-central-1:
-      VNS3: ami-0f2d67aaf98b138e7
+      VNS3: ami-0630fe90e7396d121
     eu-north-1:
-      VNS3: ami-5bf87125
+      VNS3: ami-f541c98b
     eu-west-1:
-      VNS3: ami-076e83bf71054765c
+      VNS3: ami-0445e06070801e990
     eu-west-2:
-      VNS3: ami-0988821d559fb6f89
+      VNS3: ami-0f112e0afdbf6237a
     eu-west-3:
-      VNS3: ami-05614ada9053bf8f9
+      VNS3: ami-05577f684b5edb088
     sa-east-1:
-      VNS3: ami-098aa3368855c893b
+      VNS3: ami-0e6f87151140bfd9f
     us-east-1:
-      VNS3: ami-0c367aa0344dd6e72
+      VNS3: ami-045dbed65bb63b350
     us-east-2:
-      VNS3: ami-0c4fa462270811c7c
+      VNS3: ami-0ed537ce287159f91
     us-west-1:
-      VNS3: ami-091eafd04ef724b53
+      VNS3: ami-0bfaded05af5bb474
     us-west-2:
-      VNS3: ami-0786d5a9d9daf3a3f
+      VNS3: ami-0f3300cdc58681e47
 Resources:
   ElasticIPVNS3:
     Type: AWS::EC2::EIP
@@ -286,7 +300,7 @@ Resources:
       SecurityGroupIds:
       - !Ref VNS3SecurityGroup
       SourceDestCheck: False
-      SubnetId: !Ref PublicSubnet1Id
+      SubnetId: !Ref PublicSubnet2Id
       Tags:
       - Key: Name
         Value: !Sub ${AWS::StackName}-VNS3
@@ -599,7 +613,7 @@ Resources:
       MaxSize: !Ref ClientCount
       MinSize: !Ref ClientCount
       VPCZoneIdentifier:
-        - !Ref PrivateSubnet1Id
+        - !Ref PrivateSubnet2Id
       Tags:
       - PropagateAtLaunch: true
         Key: Name
@@ -881,7 +895,7 @@ Resources:
       MaxSize: !Ref ClientCount
       MinSize: !Ref ClientCount
       VPCZoneIdentifier:
-        - !Ref PrivateSubnet1Id
+        - !Ref PrivateSubnet2Id
       Tags:
       - PropagateAtLaunch: true
         Key: Name

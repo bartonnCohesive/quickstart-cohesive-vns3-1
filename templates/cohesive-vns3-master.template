@@ -1,6 +1,6 @@
 ---
 AWSTemplateFormatVersion: 2010-09-09
-Description: CloudFormation script to create one VNS3 free edition network controller with five Amazon Linux 2 overlay clients
+Description: CloudFormation script to create one VNS3 free edition network controller with five Amazon Linux AMI overlay clients
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
@@ -123,23 +123,27 @@ Parameters:
   ClientInstanceTypeParameter:
     Description: Enter t3.nano, t3.micro or t3.small. Default is t3.nano.
     Type: String
-    Default: t3.nano
+    Default: t3.small
     AllowedValues:
       - t3.nano
       - t3.micro
       - t3.small
+      - c5.large
+      - c5.nlarge
   KeyPairName:
     Description: The name of an existing public/private key pair, which allows you
       to securely connect to your instance after it launches.
     Type: AWS::EC2::KeyPair::KeyName
   VNS3InstanceTypeParameter:
-    Description: Enter t3.nano, t3.micro or t3.small. Default is t3.micro.
+    Description: 'Enter t3.nano, t3.micro or t3.small. Default is t3.micro.'
     Type: String
-    Default: t3.micro
+    Default: t3.small
     AllowedValues:
       - t3.nano
       - t3.micro
       - t3.small
+      - c5.large
+      - c5.nlarge
   QSS3BucketName:
     AllowedPattern: ^[0-9a-zA-Z]+([0-9a-zA-Z-]*[0-9a-zA-Z])*$
     ConstraintDescription: Quick Start bucket name can include numbers, lowercase
