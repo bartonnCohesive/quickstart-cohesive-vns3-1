@@ -4,7 +4,7 @@
 
 wait_for_openvpn () {
     i=0
-   while True:
+   while true:
    do
    if [ "$i" -gt "90" ]; 
     then exit 1
