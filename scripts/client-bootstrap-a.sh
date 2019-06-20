@@ -2,7 +2,9 @@
 
 wait_for_api () {
     while true; do
+        set +e
         curl -k -X GET -u api:$VNS3PW https://$VNS3IP:8000/api/config --fail > /dev/null 2>&1
+        set -e
         if [ $? -eq 0 ]; then
             break
         fi
