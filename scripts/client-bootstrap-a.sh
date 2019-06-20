@@ -1,16 +1,14 @@
-#!/bin/bash -e
+#!/bin/bash -ex
 
 wait_for_api () {
-   while :
-     do
-     apistatus=`curl -k -X GET -u api:$VNS3PW https://$VNS3IP:8000/api/config 2>&1`
-        echo $apistatus | grep "refused"
-          if [ $? != 0 ] ; then
+    while true; do
+        curl -k -X GET -u api:$VNS3PW https://$VNS3IP:8000/api/config --fail > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
             break
-          fi
-         sleep 2
-     done
- }
+        fi
+        sleep 2
+    done
+}
 
 wait_for_api
 
@@ -76,7 +74,7 @@ EOF
 
 curl -s -k -X GET -u api:$VNS3PW -H 'Content-Type: application/json' -d "$request_body" https://$VNS3IP:8000/api/clientpack -o /tmp/$PACK.conf
 
-echo "redirect-gateway def1" >> /tmp/$PACK.conf
+echo "pull-filter ignore redirect-gateway" >> /tmp/$PACK.conf
 echo "route "$NETWORK" "$NETMASK" net_gateway" >> /tmp/$PACK.conf
 
 echo "up \"/bin/bash -c '[ -e /usr/local/cohesive/ra/routing-agent ] && sudo /usr/local/cohesive/ra/routing-agent restart || exit 0'\"" >> /tmp/$PACK.conf
