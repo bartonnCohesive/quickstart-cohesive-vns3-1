@@ -56,7 +56,7 @@ Metadata:
       KeyPairName:
         default: Key pair name
       VNS3InstanceTypeParameter:
-        default: The EC2 instance type for the VNS3 instance. The EC2 instance type t3.small is adequate for general testing purposes. For performance testing, we suggest using a c5.large or c5n.large, if available in the region you are testing in.
+        default: VNS3 instance type.
       QSS3BucketName:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
@@ -135,7 +135,7 @@ Parameters:
       to securely connect to your instance after it launches.
     Type: AWS::EC2::KeyPair::KeyName
   VNS3InstanceTypeParameter:
-    Description: 'Enter t3.nano, t3.micro or t3.small. Default is t3.micro.'
+    Description: 'The EC2 instance type for the VNS3 instance. The EC2 instance type t3.small is adequate for general testing purposes. For performance testing, we suggest using a c5.large or c5n.large, if available in the region you are testing in. Enter t3.nano, t3.micro or t3.small. Default is t3.small'
     Type: String
     Default: t3.small
     AllowedValues:

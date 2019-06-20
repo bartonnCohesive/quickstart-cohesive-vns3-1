@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash -e
 
 wait_for_api () {
    while :
