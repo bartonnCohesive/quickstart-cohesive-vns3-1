@@ -1,4 +1,4 @@
-#!/bin/bash -ex
+#!/bin/bash -x
 
 #Waits for openvpn service to become active and installs Cohesive Networks VNS3 Routing Agent
 

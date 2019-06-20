@@ -1,15 +1,15 @@
 #!/bin/bash -ex
 
 wait_for_api () {
+    set +e
     while true; do
-        set +e
         curl -k -X GET -u api:$VNS3PW https://$VNS3IP:8000/api/config --fail > /dev/null 2>&1
-        set -e
         if [ $? -eq 0 ]; then
             break
         fi
         sleep 2
     done
+    set -e
 }
 
 wait_for_api
@@ -74,7 +74,6 @@ request_body=$(< <(cat <<EOF
 EOF
 ))
 
-sleep 30
 curl -s -k -X GET -u api:$VNS3PW -H 'Content-Type: application/json' -d "$request_body" https://$VNS3IP:8000/api/clientpack -o /tmp/$PACK.conf
 
 echo "pull-filter ignore redirect-gateway" >> /tmp/$PACK.conf
