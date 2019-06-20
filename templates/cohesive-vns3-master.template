@@ -253,7 +253,7 @@ Resources:
         OVERLAY3: !Ref OVERLAY3
         OVERLAY4: !Ref OVERLAY4
         OVERLAY5: !Ref OVERLAY5
-        ASGCOOLDOWN: !Ref ASGCOOLDOWN
+        ASGCooldown: !Ref ASGCOOLDOWN
 Outputs:
   VNS3PublicIp:
     Description: The URL to connect to the VNS3 Network Controller
