@@ -74,6 +74,7 @@ request_body=$(< <(cat <<EOF
 EOF
 ))
 
+sleep 30
 curl -s -k -X GET -u api:$VNS3PW -H 'Content-Type: application/json' -d "$request_body" https://$VNS3IP:8000/api/clientpack -o /tmp/$PACK.conf
 
 echo "pull-filter ignore redirect-gateway" >> /tmp/$PACK.conf
