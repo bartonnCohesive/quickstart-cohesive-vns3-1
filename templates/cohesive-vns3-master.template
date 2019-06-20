@@ -163,10 +163,6 @@ Parameters:
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
     Type: String
-  AmazonLinuxAMI:
-    Default: /aws/service/ami-amazon-linux-latest/amzn-ami-hvm-x86_64-gp2
-    Description: SSM parameter for the latest Amazon Linux AMI. (Advanced Usage).
-    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
   ClientCount:
     Default: 1
     Description: Enter the number of overlay clients to launch.
@@ -251,7 +247,6 @@ Resources:
         VNS3InstanceTypeParameter: !Ref VNS3InstanceTypeParameter
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        AmazonLinuxAMI: !Ref AmazonLinuxAMI
         ClientCount: !Ref ClientCount
         OVERLAY1: !Ref OVERLAY1
         OVERLAY2: !Ref OVERLAY2
