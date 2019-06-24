@@ -437,6 +437,7 @@ Resources:
               env:
                 VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY1
+                VNS3OVERLAY1: !Ref OVERLAY1
                 VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
@@ -578,6 +579,7 @@ Resources:
               env:
                 VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY2
+                VNS3OVERLAY1: !Ref OVERLAY1
                 VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
@@ -719,6 +721,7 @@ Resources:
               env:
                 VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY3
+                VNS3OVERLAY1: !Ref OVERLAY1
                 VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
@@ -860,6 +863,7 @@ Resources:
               env:
                 VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY4
+                VNS3OVERLAY1:   !Ref OVERLAY1
                 VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
@@ -1001,6 +1005,7 @@ Resources:
               env:
                 VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY5
+                VNS3OVERLAY:    !Ref OVERLAY1
                 VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
