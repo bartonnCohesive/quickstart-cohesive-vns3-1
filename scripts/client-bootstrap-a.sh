@@ -88,4 +88,8 @@ sed 's/^remote '$VNS3IP' 1194/remote '$VNS3PDNS' 1194/g' /tmp/$PACK.conf > /etc/
 
 rm -f /tmp/$PACK.conf
 
+if [ "$PACK" == "$VNS3OVERLAY1" ]; then 
+    curl -k -X POST -u api:$VNS3PW -d "{\"rule\":\"MACRO_CUST -o eth0 -s ${VNS3OVERLAY1}/29 -j MASQUERADE\"}" -H 'Content-Type: application/json' https://$VNS3IP:8000/api/firewall/rules;
+    curl -k -X POST -u api:$VNS3PW -d "{\"rule\":\"FORWARD_CUST -j ACCEPT\"}" -H 'Content-Type: application/json' https://$VNS3IP:8000/api/firewall/rules
+fi
 exit 0
