@@ -358,18 +358,24 @@ Resources:
           default:
             - "config1"
             - "config2"
+            - "config3"
         config1:
           packages:
             yum:
               openvpn: []
           services:
             sysvinit:
+              openvpn:
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/openvpn/vns3clientpack.conf"
               cfn-hup:
-                  enabled: true
-                  ensureRunning: true
-                  files:
-                  - /etc/cfn/cfn-hup.conf
-                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/cfn/cfn-hup.conf"
+                  - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
           files:
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -420,6 +426,17 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
+            /tmp/client-bootstrap-c.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
@@ -435,20 +452,21 @@ Resources:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY1
-                VNS3OVERLAY1: !Ref OVERLAY1
-                VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
-          services:
-            openvpn:
-              enabled: 'true'
-              ensureRunning: 'true'
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap-b.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+        config3:
+          commands:
+            c-bootstrap:
+              command: /tmp/client-bootstrap-c.sh
               env:
                 VNS3OVERLAYIP: !Ref OVERLAY1
     Properties:
@@ -500,18 +518,24 @@ Resources:
           default:
             - "config1"
             - "config2"
+            - "config3"
         config1:
           packages:
             yum:
               openvpn: []
           services:
             sysvinit:
+              openvpn:
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/openvpn/vns3clientpack.conf"
               cfn-hup:
-                  enabled: true
-                  ensureRunning: true
-                  files:
-                  - /etc/cfn/cfn-hup.conf
-                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/cfn/cfn-hup.conf"
+                  - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
           files:
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -562,6 +586,17 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
+            /tmp/client-bootstrap-c.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
@@ -577,20 +612,21 @@ Resources:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY2
-                VNS3OVERLAY1: !Ref OVERLAY1
-                VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
-          services:
-            openvpn:
-              enabled: 'true'
-              ensureRunning: 'true'
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap-b.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+        config3:
+          commands:
+            c-bootstrap:
+              command: /tmp/client-bootstrap-c.sh
               env:
                 VNS3OVERLAYIP: !Ref OVERLAY2
     Properties:
@@ -642,18 +678,24 @@ Resources:
           default:
             - "config1"
             - "config2"
+            - "config3"
         config1:
           packages:
             yum:
               openvpn: []
           services:
             sysvinit:
+              openvpn:
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/openvpn/vns3clientpack.conf"
               cfn-hup:
-                  enabled: true
-                  ensureRunning: true
-                  files:
-                  - /etc/cfn/cfn-hup.conf
-                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/cfn/cfn-hup.conf"
+                  - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
           files:
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -704,13 +746,24 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
+            /tmp/client-bootstrap-c.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}cohesive-ra-1.1.1_x86_64.rpm
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -719,20 +772,21 @@ Resources:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY3
-                VNS3OVERLAY1: !Ref OVERLAY1
-                VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
-          services:
-            openvpn:
-              enabled: 'true'
-              ensureRunning: 'true'
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap-b.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+        config3:
+          commands:
+            c-bootstrap:
+              command: /tmp/client-bootstrap-c.sh
               env:
                 VNS3OVERLAYIP: !Ref OVERLAY3
     Properties:
@@ -784,18 +838,24 @@ Resources:
           default:
             - "config1"
             - "config2"
+            - "config3"
         config1:
           packages:
             yum:
               openvpn: []
           services:
             sysvinit:
+              openvpn:
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/openvpn/vns3clientpack.conf"
               cfn-hup:
-                  enabled: true
-                  ensureRunning: true
-                  files:
-                  - /etc/cfn/cfn-hup.conf
-                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/cfn/cfn-hup.conf"
+                  - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
           files:
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -846,6 +906,17 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
+            /tmp/client-bootstrap-c.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
@@ -861,20 +932,21 @@ Resources:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY4
-                VNS3OVERLAY1:   !Ref OVERLAY1
-                VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
-          services:
-            openvpn:
-              enabled: 'true'
-              ensureRunning: 'true'
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap-b.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+        config3:
+          commands:
+            c-bootstrap:
+              command: /tmp/client-bootstrap-c.sh
               env:
                 VNS3OVERLAYIP: !Ref OVERLAY4
     Properties:
@@ -926,18 +998,24 @@ Resources:
           default:
             - "config1"
             - "config2"
+            - "config3"
         config1:
           packages:
             yum:
               openvpn: []
           services:
             sysvinit:
+              openvpn:
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/openvpn/vns3clientpack.conf"
               cfn-hup:
-                  enabled: true
-                  ensureRunning: true
-                  files:
-                  - /etc/cfn/cfn-hup.conf
-                  - /etc/cfn/hooks.d/cfn-auto-reloader.conf
+                enabled: "true"
+                ensureRunning: "true"
+                files:
+                  - "/etc/cfn/cfn-hup.conf"
+                  - "/etc/cfn/hooks.d/cfn-auto-reloader.conf"
           files:
             /etc/cfn/cfn-hup.conf:
               content: !Sub |
@@ -988,6 +1066,17 @@ Resources:
                 - GovCloudCondition
                 - s3-us-gov-west-1
                 - s3
+            /tmp/client-bootstrap-c.sh:
+              authentication: S3AccessCreds
+              group: root
+              mode: '000755'
+              owner: root
+              source: !Sub
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+              - QSS3Region: !If
+                - GovCloudCondition
+                - s3-us-gov-west-1
+                - s3
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
@@ -1003,20 +1092,21 @@ Resources:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VPC_CIDR: !Ref VPCCIDR
                 VNS3OVERLAYIP: !Ref OVERLAY5
-                VNS3OVERLAY:    !Ref OVERLAY1
-                VNS3PDNS: !GetAtt VNS3.PublicDnsName
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
-          services:
-            openvpn:
-              enabled: 'true'
-              ensureRunning: 'true'
           commands:
             b-bootstrap:
               command: /tmp/client-bootstrap-b.sh
+              env:
+                VPC_CIDR: !Ref VPCCIDR
+                VNS3IP: !GetAtt VNS3.PrivateIp
+                VNS3PDNS: !GetAtt VNS3.PublicDnsName
+        config3:
+          commands:
+            c-bootstrap:
+              command: /tmp/client-bootstrap-c.sh
               env:
                 VNS3OVERLAYIP: !Ref OVERLAY5
     Properties:
