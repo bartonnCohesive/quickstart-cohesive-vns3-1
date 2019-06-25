@@ -26,18 +26,11 @@ Metadata:
       Parameters:
         - ClientInstanceTypeParameter
         - KeyPairName
-        - ASGCooldown
         - AmazonLinuxAMI
     - Label:
         default: Cohesive Networks VNS3 configuration
       Parameters:
         - VNS3InstanceTypeParameter
-        - ClientCount
-        - OVERLAY1
-        - OVERLAY2
-        - OVERLAY3
-        - OVERLAY4
-        - OVERLAY5
     - Label:
         default: AWS Quick Start configuration
       Parameters:
@@ -68,20 +61,6 @@ Metadata:
         default: Quick Start S3 key prefix
       AmazonLinuxAMI:
         default: Amazon Linux SSM Parameter
-      ClientCount:
-        default: Client count
-      ASGCooldown:
-        default: Autoscaling Group cooldown period
-      OVERLAY1:
-        default: 1st VNS3 overlay IP address
-      OVERLAY2:
-        default: 2nd VNS3 overlay IP address
-      OVERLAY3:
-        default: 3rd VNS3 overlay IP address
-      OVERLAY4:
-        default: 4th VNS3 overlay IP address
-      OVERLAY5:
-        default: 5th VNS3 overlay IP address
 Parameters:
   VPCID:
     Description: ID of the VPC to deploy the VNS3 overlay network into.
@@ -157,42 +136,24 @@ Parameters:
     Default: /aws/service/ami-amazon-linux-latest/amzn-ami-hvm-x86_64-gp2
     Description: SSM parameter for the latest Amazon Linux AMI. (Advanced Usage).
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-  ClientCount:
-    Default: 1
-    Description: Enter the number of overlay clients to launch.
-    MaxValue: 1
-    MinValue: 1
-    Type: Number
-  OVERLAY1:
-    Default: '100_127_255_193'
-    Description: "1st VNS3 Overlay IP"
-    Type: String
-  OVERLAY2:
-    Default: '100_127_255_194'
-    Description: "2nd VNS3 Overlay IP"
-    Type: String
-  OVERLAY3:
-    Default: '100_127_255_195'
-    Description: "3rd VNS3 Overlay IP"
-    Type: String
-  OVERLAY4:
-    Default: '100_127_255_196'
-    Description: "4th VNS3 Overlay IP"
-    Type: String
-  OVERLAY5:
-    Default: '100_127_255_197'
-    Description: "5th VNS3 Overlay IP"
-    Type: String
-  ASGCooldown:
-    Default: '10'
-    Description: Autoscaling Group cooldown period (seconds)
-    Type: String
 Conditions:
   GovCloudCondition:
     !Or
       - !Equals [!Ref 'AWS::Region', us-gov-east-1]
       - !Equals [!Ref 'AWS::Region', us-gov-west-1]
 Mappings:
+  VNS3:
+    overlay:
+      OVERLAY1: "100_127_255_193"
+      OVERLAY2: "100_127_255_194"
+      OVERLAY3: "100_127_255_195"
+      OVERLAY4: "100_127_255_196"
+      OVERLAY5: "100_127_255_197"
+    autoscale:
+      ASGCooldown: '10'
+      CCDefault: '1'
+      CCMaxValue: '1'
+      CCMinValue: '1'
   AWSAMIRegionMap:
     ap-northeast-1:
       VNS3: ami-0e9e8b8847e24c4e3
@@ -231,6 +192,18 @@ Resources:
     Type: AWS::EC2::EIP
     Properties:
       Domain: vpc
+  CFVPCESecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub ${AWS::StackName}-CFVPCE-sg
+      GroupDescription: !Sub ${AWS::StackName}-CFVPCE-sg
+      SecurityGroupEgress:
+      - CidrIp: 0.0.0.0/0
+        IpProtocol: '-1'
+      SecurityGroupIngress:
+      - CidrIp: !Ref VPCCIDR
+        IpProtocol: '-1'
+      VpcId: !Ref VPCID
   ClientSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -245,7 +218,7 @@ Resources:
         ToPort: 22
       Tags:
       - Key: Name
-        Value: !Sub ${AWS::StackName}-host
+        Value: !Sub ${AWS::StackName}-hosts
       VpcId: !Ref VPCID
   VNS3SecurityGroup:
     Type: AWS::EC2::SecurityGroup
@@ -275,6 +248,20 @@ Resources:
       - Key: Name
         Value: !Sub ${AWS::StackName}-VNS3
       VpcId: !Ref VPCID
+  CFEndpoint:
+    Type: AWS::EC2::VPCEndpoint
+    DependsOn:
+      - CFVPCESecurityGroup
+    Properties:
+      VpcId: !Ref VPCID
+      ServiceName: !Sub "com.amazonaws.${AWS::Region}.cloudformation"
+      VpcEndpointType: "Interface"
+      PrivateDnsEnabled: true
+      SubnetIds:
+        - !Ref PrivateSubnet1Id
+        - !Ref PrivateSubnet2Id
+      SecurityGroupIds:
+        - !Ref CFVPCESecurityGroup
   VNS3RecoveryTestAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
@@ -452,7 +439,7 @@ Resources:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VNS3OVERLAYIP: !Ref OVERLAY1
+                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY1]
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
@@ -468,7 +455,7 @@ Resources:
             c-bootstrap:
               command: /tmp/client-bootstrap-c.sh
               env:
-                VNS3OVERLAYIP: !Ref OVERLAY1
+                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY1]
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
@@ -489,15 +476,15 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
-        Count: !Ref ClientCount
+        Count: !FindInMap [ VNS3, autoscale, CCDefault ]
         Timeout: PT10M
     DependsOn:
       - VNS3
     Properties:
       LaunchConfigurationName: !Ref Client1LaunchConfig
-      Cooldown: !Ref ASGCooldown
-      MaxSize: !Ref ClientCount
-      MinSize: !Ref ClientCount
+      Cooldown: !FindInMap [ VNS3, autoscale, ASGCooldown ]
+      MaxSize: !FindInMap [ VNS3, autoscale, CCMaxValue ]
+      MinSize: !FindInMap [ VNS3, autoscale, CCMinValue ]
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1Id
       Tags:
@@ -612,7 +599,7 @@ Resources:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VNS3OVERLAYIP: !Ref OVERLAY2
+                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY2]
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
@@ -628,7 +615,7 @@ Resources:
             c-bootstrap:
               command: /tmp/client-bootstrap-c.sh
               env:
-                VNS3OVERLAYIP: !Ref OVERLAY2
+                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY2]
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
@@ -649,15 +636,15 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
-        Count: !Ref ClientCount
+        Count: !FindInMap [ VNS3, autoscale, CCDefault ]
         Timeout: PT10M
     DependsOn:
       - VNS3
     Properties:
       LaunchConfigurationName: !Ref Client2LaunchConfig
-      Cooldown: !Ref ASGCooldown
-      MaxSize: !Ref ClientCount
-      MinSize: !Ref ClientCount
+      Cooldown: !FindInMap [ VNS3, autoscale, ASGCooldown ]
+      MaxSize: !FindInMap [ VNS3, autoscale, CCMaxValue ]
+      MinSize: !FindInMap [ VNS3, autoscale, CCMinValue ]
       VPCZoneIdentifier:
         - !Ref PrivateSubnet2Id
       Tags:
@@ -763,7 +750,7 @@ Resources:
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}cohesive-ra-1.1.1_x86_64.rpm
+              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
               - QSS3Region: !If
                 - GovCloudCondition
                 - s3-us-gov-west-1
@@ -772,7 +759,7 @@ Resources:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VNS3OVERLAYIP: !Ref OVERLAY3
+                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY3]
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
@@ -788,7 +775,7 @@ Resources:
             c-bootstrap:
               command: /tmp/client-bootstrap-c.sh
               env:
-                VNS3OVERLAYIP: !Ref OVERLAY3
+                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY3]
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
@@ -809,15 +796,15 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
-        Count: !Ref ClientCount
+        Count: !FindInMap [ VNS3, autoscale, CCDefault ]
         Timeout: PT10M
     DependsOn:
       - VNS3
     Properties:
       LaunchConfigurationName: !Ref Client3LaunchConfig
-      Cooldown: !Ref ASGCooldown
-      MaxSize: !Ref ClientCount
-      MinSize: !Ref ClientCount
+      Cooldown: !FindInMap [ VNS3, autoscale, ASGCooldown ]
+      MaxSize: !FindInMap [ VNS3, autoscale, CCMaxValue ]
+      MinSize: !FindInMap [ VNS3, autoscale, CCMinValue ]
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1Id
       Tags:
@@ -932,7 +919,7 @@ Resources:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VNS3OVERLAYIP: !Ref OVERLAY4
+                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY4]
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
@@ -948,7 +935,7 @@ Resources:
             c-bootstrap:
               command: /tmp/client-bootstrap-c.sh
               env:
-                VNS3OVERLAYIP: !Ref OVERLAY4
+                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY4]
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
@@ -969,15 +956,15 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
-        Count: !Ref ClientCount
+        Count: !FindInMap [ VNS3, autoscale, CCDefault ]
         Timeout: PT10M
     DependsOn:
       - VNS3
     Properties:
       LaunchConfigurationName: !Ref Client4LaunchConfig
-      Cooldown: !Ref ASGCooldown
-      MaxSize: !Ref ClientCount
-      MinSize: !Ref ClientCount
+      Cooldown: !FindInMap [ VNS3, autoscale, ASGCooldown ]
+      MaxSize: !FindInMap [ VNS3, autoscale, CCMaxValue ]
+      MinSize: !FindInMap [ VNS3, autoscale, CCMinValue ]
       VPCZoneIdentifier:
         - !Ref PrivateSubnet2Id
       Tags:
@@ -1092,7 +1079,7 @@ Resources:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VNS3OVERLAYIP: !Ref OVERLAY5
+                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY5]
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
@@ -1108,7 +1095,7 @@ Resources:
             c-bootstrap:
               command: /tmp/client-bootstrap-c.sh
               env:
-                VNS3OVERLAYIP: !Ref OVERLAY5
+                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY5]
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
@@ -1129,15 +1116,15 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
-        Count: !Ref ClientCount
+        Count: !FindInMap [ VNS3, autoscale, CCDefault ]
         Timeout: PT10M
     DependsOn:
       - VNS3
     Properties:
       LaunchConfigurationName: !Ref Client5LaunchConfig
-      Cooldown: !Ref ASGCooldown
-      MaxSize: !Ref ClientCount
-      MinSize: !Ref ClientCount
+      Cooldown: !FindInMap [ VNS3, autoscale, ASGCooldown ]
+      MaxSize: !FindInMap [ VNS3, autoscale, CCMaxValue ]
+      MinSize: !FindInMap [ VNS3, autoscale, CCMinValue ]
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1Id
       Tags:
