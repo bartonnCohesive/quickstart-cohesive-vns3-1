@@ -164,23 +164,23 @@ Parameters:
     MinValue: 1
     Type: Number
   OVERLAY1:
-    Default: '100.127.255.193'
+    Default: '100_127_255_193'
     Description: "1st VNS3 Overlay IP"
     Type: String
   OVERLAY2:
-    Default: '100.127.255.194'
+    Default: '100_127_255_194'
     Description: "2nd VNS3 Overlay IP"
     Type: String
   OVERLAY3:
-    Default: '100.127.255.195'
+    Default: '100_127_255_195'
     Description: "3rd VNS3 Overlay IP"
     Type: String
   OVERLAY4:
-    Default: '100.127.255.196'
+    Default: '100_127_255_196'
     Description: "4th VNS3 Overlay IP"
     Type: String
   OVERLAY5:
-    Default: '100.127.255.197'
+    Default: '100_127_255_197'
     Description: "5th VNS3 Overlay IP"
     Type: String
   ASGCooldown:
