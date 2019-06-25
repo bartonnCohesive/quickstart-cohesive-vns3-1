@@ -25,12 +25,6 @@ Metadata:
         default: Cohesive Networks VNS3 configuration
       Parameters:
         - VNS3InstanceTypeParameter
-        - ClientCount
-        - OVERLAY1
-        - OVERLAY2
-        - OVERLAY3
-        - OVERLAY4
-        - OVERLAY5
     - Label:
         default: AWS Quick Start configuration
       Parameters:
@@ -63,21 +57,6 @@ Metadata:
         default: Quick Start S3 key prefix
       AmazonLinuxAMI:
         default: Amazon Linux SSM Parameter
-      ClientCount:
-        default: Client count
-      ASGCOOLDOWN:
-        default: Autoscaling Group cooldown period
-      OVERLAY1:
-        default: 1st VNS3 overlay IP address
-      OVERLAY2:
-        default: 2nd VNS3 overlay IP address
-      OVERLAY3:
-        default: 3rd VNS3 overlay IP address
-      OVERLAY4:
-        default: 4th VNS3 overlay IP address
-      OVERLAY5:
-         default: 5th VNS3 overlay IP address
-
 Parameters:
   AvailabilityZones:
     Description: List of Availability Zones to use for the subnets in the VPC. Two
@@ -123,7 +102,7 @@ Parameters:
   ClientInstanceTypeParameter:
     Description: Enter t3.nano, t3.micro or t3.small. Default is t3.nano.
     Type: String
-    Default: t3.small
+    Default: t3.micro
     AllowedValues:
       - t3.nano
       - t3.micro
@@ -163,37 +142,6 @@ Parameters:
       can include numbers, lowercase letters, uppercase letters, hyphens (-), and
       forward slash (/).
     Type: String
-  ClientCount:
-    Default: 1
-    Description: Enter the number of overlay clients to launch.
-    MaxValue: 1
-    MinValue: 1
-    Type: Number
-  OVERLAY1:
-    Default: '100_127_255_193'
-    Description: "1st VNS3 Overlay IP."
-    Type: String
-  OVERLAY2:
-    Default: '100_127_255_194'
-    Description: "2nd VNS3 Overlay IP."
-    Type: String
-  OVERLAY3:
-    Default: '100_127_255_195'
-    Description: "3rd VNS3 Overlay IP."
-    Type: String
-  OVERLAY4:
-    Default: '100_127_255_196'
-    Description: "4th VNS3 Overlay IP."
-    Type: String
-  OVERLAY5:
-    Default: '100_127_255_197'
-    Description: "5th VNS3 Overlay IP."
-    Type: String
-  ASGCOOLDOWN:
-    Default: '10'
-    Description: Autoscaling Group cooldown period (seconds).
-    Type: String
-
 Conditions:
   GovCloudCondition:
     !Or
@@ -247,13 +195,6 @@ Resources:
         VNS3InstanceTypeParameter: !Ref VNS3InstanceTypeParameter
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
-        ClientCount: !Ref ClientCount
-        OVERLAY1: !Ref OVERLAY1
-        OVERLAY2: !Ref OVERLAY2
-        OVERLAY3: !Ref OVERLAY3
-        OVERLAY4: !Ref OVERLAY4
-        OVERLAY5: !Ref OVERLAY5
-        ASGCooldown: !Ref ASGCOOLDOWN
 Outputs:
   VNS3PublicIp:
     Description: The URL to connect to the VNS3 Network Controller
