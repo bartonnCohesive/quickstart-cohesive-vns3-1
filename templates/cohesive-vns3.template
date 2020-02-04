@@ -156,37 +156,37 @@ Mappings:
       CCMinValue: '1'
   AWSAMIRegionMap:
     ap-northeast-1:
-      VNS3: ami-05ecbd894cae6bce0
+      VNS3: ami-05d3dcd7755d4c1a7
     ap-northeast-2:
-      VNS3: ami-0d1742e54c7b3f31d
+      VNS3: ami-036babcd705e5d880
     ap-south-1:
-      VNS3: ami-0c9b309043f2fec62
+      VNS3: ami-0d51f073bfb079f55
     ap-southeast-1:
-      VNS3: ami-0a626d9d1047ef572
+      VNS3: ami-0aa4b8450ef0d4a39
     ap-southeast-2:
-      VNS3: ami-0f8d6dd9773e668b6
+      VNS3: ami-01871d32801e0d831
     ca-central-1:
-      VNS3: ami-0c354555aa1ada51e
+      VNS3: ami-06a06762f965fc486
     eu-central-1:
-      VNS3: ami-07b7e9ccd09c2b748
+      VNS3: ami-0877e38c343b00257
     eu-north-1:
-      VNS3: ami-ab9e14d5
+      VNS3: ami-034b0534edaf9a01b
     eu-west-1:
-      VNS3: ami-0345e7592dde48eef
+      VNS3: ami-0db234b771b2e6f2d
     eu-west-2:
-      VNS3: ami-037790374a4b68342
+      VNS3: ami-071a9c7b134b0e6c6
     eu-west-3:
-      VNS3: ami-082f0227ec34d72e4
+      VNS3: ami-04d8d2545dfe1c0c3
     sa-east-1:
-      VNS3: ami-02452e3ea939ecba3
+      VNS3: ami-07dd7720d9a5b15c6
     us-east-1:
-      VNS3: ami-044d0f6f72eb78192
+      VNS3: ami-049575602c039430a
     us-east-2:
-      VNS3: ami-050065dd1a6f36926
+      VNS3: ami-02290c94d13693248
     us-west-1:
-      VNS3: ami-0e32096644a5d95ca
+      VNS3: ami-015b48309a5b8a077
     us-west-2:
-      VNS3: ami-0aa9ac24259140fb7
+      VNS3: ami-0fa66e6de7274d415
 Resources:
   ElasticIPVNS3:
     Type: AWS::EC2::EIP
