@@ -14,16 +14,18 @@ wait_for_api () {
 
 wait_for_api
 
+sleep 5m
+
 PACK=$VNS3OVERLAYIP
 
 request_body=$(< <(cat <<EOF
 {
   "name": "$PACK",
-  "format": "conf"
+  "fileformat": "conf"
 }
 EOF
 ))
 
-curl -s -k -X GET -u api:$VNS3PW -H 'Content-Type: application/json' -d "$request_body" https://$VNS3IP:8000/api/clientpack -o /etc/openvpn/vns3clientpack.conf
+sudo curl -s -k -X GET -u api:$VNS3PW -H 'Content-Type: application/json' -d "$request_body" https://$VNS3IP:8000/api/clientpack -o /etc/openvpn/vns3clientpack.conf
 
 exit 0

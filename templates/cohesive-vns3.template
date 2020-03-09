@@ -326,6 +326,15 @@ Resources:
               - !Sub "arn:aws:s3:::${QSS3BucketName}/*"
             Action:
               - s3:GetObject
+      - PolicyName: UpdateSSM
+        PolicyDocument:
+          Version: 2012-10-17
+          Statement:
+          - Effect: Allow
+            Resource:
+              - !Sub "*"
+            Action:
+              - ssm:UpdateInstanceInformation
   ClientProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
