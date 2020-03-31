@@ -4,32 +4,32 @@ Description: CloudFormation script to create one VNS3 free edition network contr
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-    - Label:
-        default: VPC network configuration
-      Parameters:
-        - AvailabilityZones
-        - VPCCIDR
-        - PrivateSubnet1CIDR
-        - PrivateSubnet2CIDR
-        - PublicSubnet1CIDR
-        - PublicSubnet2CIDR
-        - RemoteAccessCidr
-    - Label:
-        default: Amazon EC2 configuration
-      Parameters:
-        - ClientInstanceTypeParameter
-        - KeyPairName
-        - ASGCOOLDOWN
-        - AmazonLinuxAMI
-    - Label:
-        default: Cohesive Networks VNS3 configuration
-      Parameters:
-        - VNS3InstanceTypeParameter
-    - Label:
-        default: AWS Quick Start configuration
-      Parameters:
-        - QSS3BucketName
-        - QSS3KeyPrefix
+      - Label:
+          default: VPC network configuration
+        Parameters:
+          - AvailabilityZones
+          - VPCCIDR
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
+          - RemoteAccessCidr
+      - Label:
+          default: Amazon EC2 configuration
+        Parameters:
+          - ClientInstanceTypeParameter
+          - KeyPairName
+          - ASGCOOLDOWN
+          - AmazonLinuxAMI
+      - Label:
+          default: Cohesive Networks VNS3 configuration
+        Parameters:
+          - VNS3InstanceTypeParameter
+      - Label:
+          default: AWS Quick Start configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
     ParameterLabels:
       AvailabilityZones:
         default: Availability Zones
@@ -155,7 +155,7 @@ Resources:
         - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template
         - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
       Parameters:
-        AvailabilityZones: !Join [ ',', !Ref AvailabilityZones ]
+        AvailabilityZones: !Join [',', !Ref AvailabilityZones]
         NumberOfAZs: '2'
         PrivateSubnet1ACIDR: !Ref PrivateSubnet1CIDR
         PrivateSubnet2ACIDR: !Ref PrivateSubnet2CIDR
