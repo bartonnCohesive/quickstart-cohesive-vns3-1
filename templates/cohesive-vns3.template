@@ -36,6 +36,7 @@ Metadata:
         Parameters:
           - QSS3BucketName
           - QSS3KeyPrefix
+          - QSS3BucketRegion
     ParameterLabels:
       VPCID:
         default: VPC ID
@@ -61,7 +62,13 @@ Metadata:
         default: Quick Start S3 key prefix
       AmazonLinuxAMI:
         default: Amazon Linux SSM Parameter
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket region
 Parameters:
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: "The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value."
+    Type: String
   VPCID:
     Description: ID of the VPC to deploy the VNS3 overlay network into.
     Type: AWS::EC2::VPC::Id
@@ -137,10 +144,7 @@ Parameters:
     Description: SSM parameter for the latest Amazon Linux AMI. (Advanced Usage).
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
 Conditions:
-  GovCloudCondition:
-    !Or
-      - !Equals [!Ref 'AWS::Region', us-gov-east-1]
-      - !Equals [!Ref 'AWS::Region', us-gov-west-1]
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Mappings:
   VNS3:
     overlay:
@@ -274,7 +278,7 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Threshold: 0
       AlarmActions:
-        - !Sub 'arn:aws:automate:${AWS::Region}:ec2:recover'
+        - !Sub 'arn:${AWS::Partition}:automate:${AWS::Region}:ec2:recover'
       Dimensions:
         - Name: InstanceId
           Value:
@@ -314,7 +318,11 @@ Resources:
             Statement:
               - Effect: Allow
                 Resource:
-                  - !Sub "arn:aws:s3:::${QSS3BucketName}"
+                  - !Sub "arn:${AWS::Partition}:s3:::${QSS3BucketName}"
+                  - !If
+                    - UsingDefaultBucket
+                    - !Sub "arn:${AWS::Partition}:s3:::${QSS3BucketName}-${AWS::Region}"
+                    - !Ref AWS::NoValue
                 Action:
                   - s3:ListBucket
         - PolicyName: ReadS3Objects
@@ -323,7 +331,11 @@ Resources:
             Statement:
               - Effect: Allow
                 Resource:
-                  - !Sub "arn:aws:s3:::${QSS3BucketName}/*"
+                  - !Sub "arn:${AWS::Partition}:s3:::${QSS3BucketName}/*"
+                  - !If
+                    - UsingDefaultBucket
+                    - !Sub "arn:${AWS::Partition}:s3:::${QSS3BucketName}-${AWS::Region}/*"
+                    - !Ref AWS::NoValue
                 Action:
                   - s3:GetObject
         - PolicyName: UpdateSSM
@@ -346,6 +358,10 @@ Resources:
         S3AccessCreds:
           buckets:
             - !Ref QSS3BucketName
+            - !If
+              - UsingDefaultBucket
+              - !Sub "${QSS3BucketName}-${AWS::Region}"
+              - !Ref AWS::NoValue
           roleName: !Ref ClientRole
           type: S3
       AWS::CloudFormation::Init:
@@ -394,55 +410,45 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/mcast.py
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-c.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
           commands:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
@@ -554,55 +560,45 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/mcast.py
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-c.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
           commands:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
@@ -714,55 +710,45 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/mcast.py
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-c.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
           commands:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
@@ -874,55 +860,45 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/mcast.py
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-c.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
           commands:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
@@ -950,7 +926,7 @@ Resources:
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
-      - !Ref ClientSecurityGroup
+        - !Ref ClientSecurityGroup
       UserData:
         Fn::Base64:
           !Sub |
@@ -1034,55 +1010,45 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/mcast.py
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-c.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
           commands:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
