@@ -11,31 +11,32 @@ Metadata:
         product-code.type: marketplace
   AWS::CloudFormation::Interface:
     ParameterGroups:
-    - Label:
-        default: VPC network configuration
-      Parameters:
-        - VPCID
-        - VPCCIDR
-        - PrivateSubnet1Id
-        - PrivateSubnet2Id
-        - PublicSubnet1Id
-        - RemoteAccessCidr
-        - BastionSecurityGroupID
-    - Label:
-        default: Amazon EC2 configuration
-      Parameters:
-        - ClientInstanceTypeParameter
-        - KeyPairName
-        - AmazonLinuxAMI
-    - Label:
-        default: Cohesive Networks VNS3 configuration
-      Parameters:
-        - VNS3InstanceTypeParameter
-    - Label:
-        default: AWS Quick Start configuration
-      Parameters:
-        - QSS3BucketName
-        - QSS3KeyPrefix
+      - Label:
+          default: VPC network configuration
+        Parameters:
+          - VPCID
+          - VPCCIDR
+          - PrivateSubnet1Id
+          - PrivateSubnet2Id
+          - PublicSubnet1Id
+          - RemoteAccessCidr
+          - BastionSecurityGroupID
+      - Label:
+          default: Amazon EC2 configuration
+        Parameters:
+          - ClientInstanceTypeParameter
+          - KeyPairName
+          - AmazonLinuxAMI
+      - Label:
+          default: Cohesive Networks VNS3 configuration
+        Parameters:
+          - VNS3InstanceTypeParameter
+      - Label:
+          default: AWS Quick Start configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+          - QSS3BucketRegion
     ParameterLabels:
       VPCID:
         default: VPC ID
@@ -61,7 +62,13 @@ Metadata:
         default: Quick Start S3 key prefix
       AmazonLinuxAMI:
         default: Amazon Linux SSM Parameter
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket region
 Parameters:
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: "The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value."
+    Type: String
   VPCID:
     Description: ID of the VPC to deploy the VNS3 overlay network into.
     Type: AWS::EC2::VPC::Id
@@ -137,10 +144,7 @@ Parameters:
     Description: SSM parameter for the latest Amazon Linux AMI. (Advanced Usage).
     Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
 Conditions:
-  GovCloudCondition:
-    !Or
-      - !Equals [!Ref 'AWS::Region', us-gov-east-1]
-      - !Equals [!Ref 'AWS::Region', us-gov-west-1]
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Mappings:
   VNS3:
     overlay:
@@ -202,55 +206,55 @@ Resources:
       GroupName: !Sub ${AWS::StackName}-CFVPCE-sg
       GroupDescription: !Sub ${AWS::StackName}-CFVPCE-sg
       SecurityGroupEgress:
-      - CidrIp: 0.0.0.0/0
-        IpProtocol: '-1'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: '-1'
       SecurityGroupIngress:
-      - CidrIp: !Ref VPCCIDR
-        IpProtocol: '-1'
+        - CidrIp: !Ref VPCCIDR
+          IpProtocol: '-1'
       VpcId: !Ref VPCID
   ClientSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Sub ${AWS::StackName}
       SecurityGroupEgress:
-      - CidrIp: 0.0.0.0/0
-        IpProtocol: '-1'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: '-1'
       SecurityGroupIngress:
-      - FromPort: 22
-        IpProtocol: tcp
-        SourceSecurityGroupId: !Ref BastionSecurityGroupID
-        ToPort: 22
+        - FromPort: 22
+          IpProtocol: tcp
+          SourceSecurityGroupId: !Ref BastionSecurityGroupID
+          ToPort: 22
       Tags:
-      - Key: Name
-        Value: !Sub ${AWS::StackName}-hosts
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-hosts
       VpcId: !Ref VPCID
   VNS3SecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: !Sub ${AWS::StackName}
       SecurityGroupEgress:
-      - CidrIp: 0.0.0.0/0
-        IpProtocol: '-1'
+        - CidrIp: 0.0.0.0/0
+          IpProtocol: '-1'
       SecurityGroupIngress:
-      - FromPort: 1194
-        IpProtocol: udp
-        SourceSecurityGroupId: !Ref ClientSecurityGroup
-        ToPort: 1194
-      - FromPort: 8000
-        IpProtocol: tcp
-        SourceSecurityGroupId: !Ref ClientSecurityGroup
-        ToPort: 8000
-      - CidrIp: !Ref RemoteAccessCidr
-        FromPort: 22
-        IpProtocol: tcp
-        ToPort: 66
-      - CidrIp: !Ref RemoteAccessCidr
-        FromPort: 8000
-        IpProtocol: tcp
-        ToPort: 8000
+        - FromPort: 1194
+          IpProtocol: udp
+          SourceSecurityGroupId: !Ref ClientSecurityGroup
+          ToPort: 1194
+        - FromPort: 8000
+          IpProtocol: tcp
+          SourceSecurityGroupId: !Ref ClientSecurityGroup
+          ToPort: 8000
+        - CidrIp: !Ref RemoteAccessCidr
+          FromPort: 22
+          IpProtocol: tcp
+          ToPort: 66
+        - CidrIp: !Ref RemoteAccessCidr
+          FromPort: 8000
+          IpProtocol: tcp
+          ToPort: 8000
       Tags:
-      - Key: Name
-        Value: !Sub ${AWS::StackName}-VNS3
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VNS3
       VpcId: !Ref VPCID
   CFEndpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -278,24 +282,24 @@ Resources:
       ComparisonOperator: GreaterThanThreshold
       Threshold: 0
       AlarmActions:
-        - !Sub 'arn:aws:automate:${AWS::Region}:ec2:recover'
+        - !Sub 'arn:${AWS::Partition}:automate:${AWS::Region}:ec2:recover'
       Dimensions:
-      - Name: InstanceId
-        Value:
-          Ref: VNS3
+        - Name: InstanceId
+          Value:
+            Ref: VNS3
   VNS3:
     Type: AWS::EC2::Instance
     Properties:
-      ImageId: !FindInMap [ AWSAMIRegionMap, !Ref 'AWS::Region', VNS3 ]
+      ImageId: !FindInMap [AWSAMIRegionMap, !Ref 'AWS::Region', VNS3]
       InstanceType: !Ref VNS3InstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroupIds:
-      - !Ref VNS3SecurityGroup
+        - !Ref VNS3SecurityGroup
       SourceDestCheck: False
       SubnetId: !Ref PublicSubnet1Id
       Tags:
-      - Key: Name
-        Value: !Sub ${AWS::StackName}-VNS3
+        - Key: Name
+          Value: !Sub ${AWS::StackName}-VNS3
   IPAssoc:
     Type: AWS::EC2::EIPAssociation
     Properties:
@@ -307,37 +311,45 @@ Resources:
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
-        - Effect: Allow
-          Principal:
-            Service: ec2.amazonaws.com
-          Action: sts:AssumeRole
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
       Policies:
-      - PolicyName: ListS3Bucket
-        PolicyDocument:
-          Version: 2012-10-17
-          Statement:
-          - Effect: Allow
-            Resource:
-              - !Sub "arn:aws:s3:::${QSS3BucketName}"
-            Action:
-              - s3:ListBucket
-      - PolicyName: ReadS3Objects
-        PolicyDocument:
-          Version: 2012-10-17
-          Statement:
-          - Effect: Allow
-            Resource:
-              - !Sub "arn:aws:s3:::${QSS3BucketName}/*"
-            Action:
-              - s3:GetObject
-      - PolicyName: UpdateSSM
-        PolicyDocument:
-          Version: 2012-10-17
-          Statement:
-          - Effect: Allow
-            Resource: "*"
-            Action:
-              - ssm:UpdateInstanceInformation
+        - PolicyName: ListS3Bucket
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:s3:::${QSS3BucketName}"
+                  - !If
+                    - UsingDefaultBucket
+                    - !Sub "arn:${AWS::Partition}:s3:::${QSS3BucketName}-${AWS::Region}"
+                    - !Ref AWS::NoValue
+                Action:
+                  - s3:ListBucket
+        - PolicyName: ReadS3Objects
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource:
+                  - !Sub "arn:${AWS::Partition}:s3:::${QSS3BucketName}/*"
+                  - !If
+                    - UsingDefaultBucket
+                    - !Sub "arn:${AWS::Partition}:s3:::${QSS3BucketName}-${AWS::Region}/*"
+                    - !Ref AWS::NoValue
+                Action:
+                  - s3:GetObject
+        - PolicyName: UpdateSSM
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Resource: "*"
+                Action:
+                  - ssm:UpdateInstanceInformation
   ClientProfile:
     Type: AWS::IAM::InstanceProfile
     Properties:
@@ -350,6 +362,10 @@ Resources:
         S3AccessCreds:
           buckets:
             - !Ref QSS3BucketName
+            - !If
+              - UsingDefaultBucket
+              - !Sub "${QSS3BucketName}-${AWS::Region}"
+              - !Ref AWS::NoValue
           roleName: !Ref ClientRole
           type: S3
       AWS::CloudFormation::Init:
@@ -398,60 +414,50 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/mcast.py
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-c.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
           commands:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY1]
+                VNS3OVERLAYIP: !FindInMap [VNS3, overlay, OVERLAY1]
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
@@ -467,14 +473,14 @@ Resources:
             c-bootstrap:
               command: /tmp/client-bootstrap-c.sh
               env:
-                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY1]
+                VNS3OVERLAYIP: !FindInMap [VNS3, overlay, OVERLAY1]
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
-      - !Ref ClientSecurityGroup
+        - !Ref ClientSecurityGroup
       UserData:
         Fn::Base64:
           !Sub |
@@ -488,21 +494,21 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
-        Count: !FindInMap [ VNS3, autoscale, CCDefault ]
+        Count: !FindInMap [VNS3, autoscale, CCDefault]
         Timeout: PT10M
     DependsOn:
       - VNS3
     Properties:
       LaunchConfigurationName: !Ref Client1LaunchConfig
-      Cooldown: !FindInMap [ VNS3, autoscale, ASGCooldown ]
-      MaxSize: !FindInMap [ VNS3, autoscale, CCMaxValue ]
-      MinSize: !FindInMap [ VNS3, autoscale, CCMinValue ]
+      Cooldown: !FindInMap [VNS3, autoscale, ASGCooldown]
+      MaxSize: !FindInMap [VNS3, autoscale, CCMaxValue]
+      MinSize: !FindInMap [VNS3, autoscale, CCMinValue]
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1Id
       Tags:
-      - PropagateAtLaunch: true
-        Key: Name
-        Value: !Sub ${AWS::StackName}-client1
+        - PropagateAtLaunch: true
+          Key: Name
+          Value: !Sub ${AWS::StackName}-client1
   Client2LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Metadata:
@@ -558,60 +564,50 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/mcast.py
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-c.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
           commands:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY2]
+                VNS3OVERLAYIP: !FindInMap [VNS3, overlay, OVERLAY2]
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
@@ -627,14 +623,14 @@ Resources:
             c-bootstrap:
               command: /tmp/client-bootstrap-c.sh
               env:
-                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY2]
+                VNS3OVERLAYIP: !FindInMap [VNS3, overlay, OVERLAY2]
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
-      - !Ref ClientSecurityGroup
+        - !Ref ClientSecurityGroup
       UserData:
         Fn::Base64:
           !Sub |
@@ -648,21 +644,21 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
-        Count: !FindInMap [ VNS3, autoscale, CCDefault ]
+        Count: !FindInMap [VNS3, autoscale, CCDefault]
         Timeout: PT10M
     DependsOn:
       - VNS3
     Properties:
       LaunchConfigurationName: !Ref Client2LaunchConfig
-      Cooldown: !FindInMap [ VNS3, autoscale, ASGCooldown ]
-      MaxSize: !FindInMap [ VNS3, autoscale, CCMaxValue ]
-      MinSize: !FindInMap [ VNS3, autoscale, CCMinValue ]
+      Cooldown: !FindInMap [VNS3, autoscale, ASGCooldown]
+      MaxSize: !FindInMap [VNS3, autoscale, CCMaxValue]
+      MinSize: !FindInMap [VNS3, autoscale, CCMinValue]
       VPCZoneIdentifier:
         - !Ref PrivateSubnet2Id
       Tags:
-      - PropagateAtLaunch: true
-        Key: Name
-        Value: !Sub ${AWS::StackName}-client2
+        - PropagateAtLaunch: true
+          Key: Name
+          Value: !Sub ${AWS::StackName}-client2
   Client3LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Metadata:
@@ -718,60 +714,50 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/mcast.py
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-c.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
           commands:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY3]
+                VNS3OVERLAYIP: !FindInMap [VNS3, overlay, OVERLAY3]
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
@@ -787,14 +773,14 @@ Resources:
             c-bootstrap:
               command: /tmp/client-bootstrap-c.sh
               env:
-                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY3]
+                VNS3OVERLAYIP: !FindInMap [VNS3, overlay, OVERLAY3]
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
-      - !Ref ClientSecurityGroup
+        - !Ref ClientSecurityGroup
       UserData:
         Fn::Base64:
           !Sub |
@@ -808,21 +794,21 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
-        Count: !FindInMap [ VNS3, autoscale, CCDefault ]
+        Count: !FindInMap [VNS3, autoscale, CCDefault]
         Timeout: PT10M
     DependsOn:
       - VNS3
     Properties:
       LaunchConfigurationName: !Ref Client3LaunchConfig
-      Cooldown: !FindInMap [ VNS3, autoscale, ASGCooldown ]
-      MaxSize: !FindInMap [ VNS3, autoscale, CCMaxValue ]
-      MinSize: !FindInMap [ VNS3, autoscale, CCMinValue ]
+      Cooldown: !FindInMap [VNS3, autoscale, ASGCooldown]
+      MaxSize: !FindInMap [VNS3, autoscale, CCMaxValue]
+      MinSize: !FindInMap [VNS3, autoscale, CCMinValue]
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1Id
       Tags:
-      - PropagateAtLaunch: true
-        Key: Name
-        Value: !Sub ${AWS::StackName}-client3
+        - PropagateAtLaunch: true
+          Key: Name
+          Value: !Sub ${AWS::StackName}-client3
   Client4LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Metadata:
@@ -878,60 +864,50 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/mcast.py
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-c.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
           commands:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY4]
+                VNS3OVERLAYIP: !FindInMap [VNS3, overlay, OVERLAY4]
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
@@ -947,14 +923,14 @@ Resources:
             c-bootstrap:
               command: /tmp/client-bootstrap-c.sh
               env:
-                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY4]
+                VNS3OVERLAYIP: !FindInMap [VNS3, overlay, OVERLAY4]
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
-      - !Ref ClientSecurityGroup
+        - !Ref ClientSecurityGroup
       UserData:
         Fn::Base64:
           !Sub |
@@ -968,21 +944,21 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
-        Count: !FindInMap [ VNS3, autoscale, CCDefault ]
+        Count: !FindInMap [VNS3, autoscale, CCDefault]
         Timeout: PT10M
     DependsOn:
       - VNS3
     Properties:
       LaunchConfigurationName: !Ref Client4LaunchConfig
-      Cooldown: !FindInMap [ VNS3, autoscale, ASGCooldown ]
-      MaxSize: !FindInMap [ VNS3, autoscale, CCMaxValue ]
-      MinSize: !FindInMap [ VNS3, autoscale, CCMinValue ]
+      Cooldown: !FindInMap [VNS3, autoscale, ASGCooldown]
+      MaxSize: !FindInMap [VNS3, autoscale, CCMaxValue]
+      MinSize: !FindInMap [VNS3, autoscale, CCMinValue]
       VPCZoneIdentifier:
         - !Ref PrivateSubnet2Id
       Tags:
-      - PropagateAtLaunch: true
-        Key: Name
-        Value: !Sub ${AWS::StackName}-client4
+        - PropagateAtLaunch: true
+          Key: Name
+          Value: !Sub ${AWS::StackName}-client4
   Client5LaunchConfig:
     Type: AWS::AutoScaling::LaunchConfiguration
     Metadata:
@@ -1038,60 +1014,50 @@ Resources:
               mode: '000755'
               owner: ec2-user
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/mcast.py
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/mcast.py
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-a.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-a.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-b.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-b.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/client-bootstrap-c.sh:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/client-bootstrap-c.sh
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
             /tmp/cohesive-ra-1.1.1_x86_64.rpm:
               authentication: S3AccessCreds
               group: root
               mode: '000755'
               owner: root
               source: !Sub
-              - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
-              - QSS3Region: !If
-                - GovCloudCondition
-                - s3-us-gov-west-1
-                - s3
+                - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}scripts/cohesive-ra-1.1.1_x86_64.rpm
+                - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+                  S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
           commands:
             a-bootstrap:
               command: /tmp/client-bootstrap-a.sh
               env:
-                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY5]
+                VNS3OVERLAYIP: !FindInMap [VNS3, overlay, OVERLAY5]
                 VNS3IP: !GetAtt VNS3.PrivateIp
                 VNS3PW: !Ref VNS3
         config2:
@@ -1107,14 +1073,14 @@ Resources:
             c-bootstrap:
               command: /tmp/client-bootstrap-c.sh
               env:
-                VNS3OVERLAYIP: !FindInMap [ VNS3, overlay, OVERLAY5]
+                VNS3OVERLAYIP: !FindInMap [VNS3, overlay, OVERLAY5]
     Properties:
       IamInstanceProfile: !Ref ClientProfile
       ImageId: !Ref AmazonLinuxAMI
       InstanceType: !Ref ClientInstanceTypeParameter
       KeyName: !Ref KeyPairName
       SecurityGroups:
-      - !Ref ClientSecurityGroup
+        - !Ref ClientSecurityGroup
       UserData:
         Fn::Base64:
           !Sub |
@@ -1128,21 +1094,21 @@ Resources:
     Type: AWS::AutoScaling::AutoScalingGroup
     CreationPolicy:
       ResourceSignal:
-        Count: !FindInMap [ VNS3, autoscale, CCDefault ]
+        Count: !FindInMap [VNS3, autoscale, CCDefault]
         Timeout: PT10M
     DependsOn:
       - VNS3
     Properties:
       LaunchConfigurationName: !Ref Client5LaunchConfig
-      Cooldown: !FindInMap [ VNS3, autoscale, ASGCooldown ]
-      MaxSize: !FindInMap [ VNS3, autoscale, CCMaxValue ]
-      MinSize: !FindInMap [ VNS3, autoscale, CCMinValue ]
+      Cooldown: !FindInMap [VNS3, autoscale, ASGCooldown]
+      MaxSize: !FindInMap [VNS3, autoscale, CCMaxValue]
+      MinSize: !FindInMap [VNS3, autoscale, CCMinValue]
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1Id
       Tags:
-      - PropagateAtLaunch: true
-        Key: Name
-        Value: !Sub ${AWS::StackName}-client5
+        - PropagateAtLaunch: true
+          Key: Name
+          Value: !Sub ${AWS::StackName}-client5
 Outputs:
   VNS3PublicIp:
     Description: The Public IP of the VNS3 Network Controller

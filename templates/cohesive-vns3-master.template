@@ -4,32 +4,33 @@ Description: CloudFormation script to create one VNS3 free edition network contr
 Metadata:
   AWS::CloudFormation::Interface:
     ParameterGroups:
-    - Label:
-        default: VPC network configuration
-      Parameters:
-        - AvailabilityZones
-        - VPCCIDR
-        - PrivateSubnet1CIDR
-        - PrivateSubnet2CIDR
-        - PublicSubnet1CIDR
-        - PublicSubnet2CIDR
-        - RemoteAccessCidr
-    - Label:
-        default: Amazon EC2 configuration
-      Parameters:
-        - ClientInstanceTypeParameter
-        - KeyPairName
-        - ASGCOOLDOWN
-        - AmazonLinuxAMI
-    - Label:
-        default: Cohesive Networks VNS3 configuration
-      Parameters:
-        - VNS3InstanceTypeParameter
-    - Label:
-        default: AWS Quick Start configuration
-      Parameters:
-        - QSS3BucketName
-        - QSS3KeyPrefix
+      - Label:
+          default: VPC network configuration
+        Parameters:
+          - AvailabilityZones
+          - VPCCIDR
+          - PrivateSubnet1CIDR
+          - PrivateSubnet2CIDR
+          - PublicSubnet1CIDR
+          - PublicSubnet2CIDR
+          - RemoteAccessCidr
+      - Label:
+          default: Amazon EC2 configuration
+        Parameters:
+          - ClientInstanceTypeParameter
+          - KeyPairName
+          - ASGCOOLDOWN
+          - AmazonLinuxAMI
+      - Label:
+          default: Cohesive Networks VNS3 configuration
+        Parameters:
+          - VNS3InstanceTypeParameter
+      - Label:
+          default: AWS Quick Start configuration
+        Parameters:
+          - QSS3BucketName
+          - QSS3KeyPrefix
+          - QSS3BucketRegion
     ParameterLabels:
       AvailabilityZones:
         default: Availability Zones
@@ -57,7 +58,13 @@ Metadata:
         default: Quick Start S3 key prefix
       AmazonLinuxAMI:
         default: Amazon Linux SSM Parameter
+      QSS3BucketRegion:
+        default: Quick Start S3 bucket region
 Parameters:
+  QSS3BucketRegion:
+    Default: 'us-east-1'
+    Description: "The AWS Region where the Quick Start S3 bucket (QSS3BucketName) is hosted. When using your own bucket, you must specify this value."
+    Type: String
   AvailabilityZones:
     Description: List of Availability Zones to use for the subnets in the VPC. Two
       Availability Zones are used for this deployment, and the logical order of your
@@ -143,19 +150,17 @@ Parameters:
       forward slash (/).
     Type: String
 Conditions:
-  GovCloudCondition:
-    !Or
-      - !Equals [!Ref 'AWS::Region', us-gov-east-1]
-      - !Equals [!Ref 'AWS::Region', us-gov-west-1]
+  UsingDefaultBucket: !Equals [!Ref QSS3BucketName, 'aws-quickstart']
 Resources:
   VPCStack:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub
-        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template
-        - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
+        - 'https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-aws-vpc/templates/aws-vpc.template.yaml'
+        - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
-        AvailabilityZones: !Join [ ',', !Ref AvailabilityZones ]
+        AvailabilityZones: !Join [',', !Ref AvailabilityZones]
         NumberOfAZs: '2'
         PrivateSubnet1ACIDR: !Ref PrivateSubnet1CIDR
         PrivateSubnet2ACIDR: !Ref PrivateSubnet2CIDR
@@ -166,8 +171,9 @@ Resources:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub
-        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}submodules/quickstart-linux-bastion/templates/linux-bastion.template
-        - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
+        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}submodules/quickstart-linux-bastion/templates/linux-bastion.template
+        - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
         EnableTCPForwarding: 'true'
         EnableX11Forwarding: 'true'
@@ -176,12 +182,14 @@ Resources:
         PublicSubnet2ID: !GetAtt VPCStack.Outputs.PublicSubnet2ID
         RemoteAccessCIDR: !Ref RemoteAccessCidr
         VPCID: !GetAtt VPCStack.Outputs.VPCID
+        QSS3BucketRegion: !Ref QSS3BucketRegion
   VNS3Stack:
     Type: AWS::CloudFormation::Stack
     Properties:
       TemplateURL: !Sub
-        - https://${QSS3BucketName}.${QSS3Region}.amazonaws.com/${QSS3KeyPrefix}templates/cohesive-vns3.template
-        - QSS3Region: !If [GovCloudCondition, !Sub 's3-${AWS::Region}', s3]
+        - https://${S3Bucket}.s3.${S3Region}.${AWS::URLSuffix}/${QSS3KeyPrefix}templates/cohesive-vns3.template
+        - S3Region: !If [UsingDefaultBucket, !Ref 'AWS::Region', !Ref QSS3BucketRegion]
+          S3Bucket: !If [UsingDefaultBucket, !Sub '${QSS3BucketName}-${AWS::Region}', !Ref QSS3BucketName]
       Parameters:
         VPCID: !GetAtt VPCStack.Outputs.VPCID
         VPCCIDR: !Ref VPCCIDR
