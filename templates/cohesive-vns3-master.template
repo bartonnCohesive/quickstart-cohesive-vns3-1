@@ -19,8 +19,6 @@ Metadata:
         Parameters:
           - ClientInstanceTypeParameter
           - KeyPairName
-          - ASGCOOLDOWN
-          - AmazonLinuxAMI
       - Label:
           default: Cohesive Networks VNS3 configuration
         Parameters:
@@ -56,8 +54,6 @@ Metadata:
         default: Quick Start S3 bucket name
       QSS3KeyPrefix:
         default: Quick Start S3 key prefix
-      AmazonLinuxAMI:
-        default: Amazon Linux SSM Parameter
       QSS3BucketRegion:
         default: Quick Start S3 bucket region
 Parameters:
@@ -203,6 +199,7 @@ Resources:
         VNS3InstanceTypeParameter: !Ref VNS3InstanceTypeParameter
         QSS3BucketName: !Ref QSS3BucketName
         QSS3KeyPrefix: !Ref QSS3KeyPrefix
+        QSS3BucketRegion: !Ref QSS3BucketRegion
 Outputs:
   VNS3PublicIp:
     Description: The URL to connect to the VNS3 Network Controller
