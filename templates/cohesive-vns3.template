@@ -148,11 +148,11 @@ Conditions:
 Mappings:
   VNS3:
     overlay:
-      OVERLAY1: "100_127_255_193"
-      OVERLAY2: "100_127_255_194"
-      OVERLAY3: "100_127_255_195"
-      OVERLAY4: "100_127_255_196"
-      OVERLAY5: "100_127_255_197"
+      OVERLAY1: "100_127_255_1"
+      OVERLAY2: "100_127_255_2"
+      OVERLAY3: "100_127_255_3"
+      OVERLAY4: "100_127_255_4"
+      OVERLAY5: "100_127_255_5"
     autoscale:
       ASGCooldown: '10'
       CCDefault: '1'
